@@ -1,0 +1,242 @@
+country,city,tld,iso3,iso2,lon,lat
+Bangladesh,Dhaka,bd,BGD,BD,90.24,23.43
+Belgium,Brussels,be,BEL,BE,4.2,50.5
+Burkina Faso,Ouagadougou,bf,BFA,BF,-1.31,12.22
+Bulgaria,Sofia,bg,BGR,BG,23.19,42.41
+Bosnia and Herzegovina,Sarajevo,ba,BIH,BA,18.25,43.52
+Barbados,Bridgetown,bb,BRB,BB,-59.37,13.06
+Wallis and Futuna,Mata-Utu,wf,WLF,WF,-171.56,-13.57
+Saint Barthelemy,Gustavia,bl,BLM,BL,-62.51,17.53
+Bermuda,Hamilton,bm,BMU,BM,-64.47,32.17
+Brunei,Bandar Seri Begawan,bn,BRN,BN,114.56,4.53
+Bolivia,La Paz,bo,BOL,BO,-68.09,-16.3
+Bahrain,Manama,bh,BHR,BH,50.34,26.14
+Burundi,Bujumbura,bi,BDI,BI,29.21,-3.22
+Benin,Porto-Novo,bj,BEN,BJ,2.37,6.29
+Bhutan,Thimphu,bt,BTN,BT,89.36,27.29
+Jamaica,Kingston,jm,JAM,JM,-76.48,18
+Bouvet Island,,bv,BVT,BV,3.24,-54.26
+Botswana,Gaborone,bw,BWA,BW,25.55,-24.45
+Samoa,Apia,ws,WSM,WS,-171.44,-13.5
+Brazil,Brasilia,br,BRA,BR,-47.55,-15.47
+Bahamas,Nassau,bs,BHS,BS,-77.21,25.05
+Jersey,Saint Helier,je,JEY,JE,-2.06,49.11
+Belarus,Minsk,by,BLR,BY,27.34,53.54
+Belize,Belmopan,bz,BLZ,BZ,-88.46,17.15
+Russia,Moscow,ru,RUS,RU,37.35,55.45
+Rwanda,Kigali,rw,RWA,RW,30.04,-1.57
+Serbia,Belgrade,rs,SRB,RS,20.3,44.5
+Timor-Leste,Dili,tl,TLS,TL,125.36,-8.35
+Turkmenistan,Ashgabat,tm,TKM,TM,58.23,37.57
+Tajikistan,Dushanbe,tj,TJK,TJ,68.48,38.35
+Romania,Bucharest,ro,ROU,RO,26.06,44.26
+Tokelau,,tk,TKL,TK,-172,-9
+Guinea-Bissau,Bissau,gw,GNB,GW,-15.35,11.51
+Guam,Hagatna,gu,GUM,GU,144.44,13.28
+Guatemala,Guatemala City,gt,GTM,GT,-90.31,14.37
+Greece,Athens,gr,GRC,GR,23.44,37.59
+Equatorial Guinea,Malabo,gq,GNQ,GQ,8.47,3.45
+Japan,Tokyo,jp,JPN,JP,139.45,35.41
+Guyana,Georgetown,gy,GUY,GY,-58.1,6.48
+Guernsey,Saint Peter Port,gg,GGY,GG,-2.32,49.27
+Georgia,T'bilisi,ge,GEO,GE,44.47,41.43
+Grenada,Saint George's,gd,GRD,GD,-61.45,12.03
+United Kingdom,London,uk,GBR,GB,-0.1,51.3
+Gabon,Libreville,ga,GAB,GA,9.27,0.23
+El Salvador,San Salvador,sv,SLV,SV,-89.12,13.42
+Guinea,Conakry,gn,GIN,GN,-13.42,9.33
+Gambia,Banjul,gm,GMB,GM,-16.34,13.27
+Greenland,Nuuk,gl,GRL,GL,-51.45,64.11
+Gibraltar,Gibraltar,gi,GIB,GI,-5.21,36.08
+Ghana,Accra,gh,GHA,GH,-0.13,5.33
+Oman,Muscat,om,OMN,OM,58.35,23.37
+Tunisia,Tunis,tn,TUN,TN,10.11,36.48
+Jordan,Amman,jo,JOR,JO,35.56,31.57
+Croatia,Zagreb,hr,HRV,HR,16,45.48
+Haiti,Port-au-Prince,ht,HTI,HT,-72.2,18.32
+Hungary,Budapest,hu,HUN,HU,19.05,47.3
+Hong Kong,Hong Kong,hk,HKG,HK,114.1,22.15
+Honduras,Tegucigalpa,hn,HND,HN,-87.13,14.06
+Heard Island and McDonald Islands,,hm,HMD,HM,72.31,-53.06
+Venezuela,Caracas,ve,VEN,VE,-66.56,10.3
+Puerto Rico,San Juan,pr,PRI,PR,-66.07,18.28
+Palestinian Territory,,ps,PSE,PS,34.2,31.25
+Palau,Melekeok,pw,PLW,PW,134.38,7.29
+Portugal,Lisbon,pt,PRT,PT,-9.08,38.43
+Svalbard,Longyearbyen,sj,SJM,SJ,15.33,78.13
+Paraguay,Asuncion,py,PRY,PY,-57.4,-25.16
+Iraq,Baghdad,iq,IRQ,IQ,44.23,33.2
+Panama,Panama City,pa,PAN,PA,-79.32,8.58
+French Polynesia,Papeete,pf,PYF,PF,-149.34,-17.32
+Papua New Guinea,Port Moresby,pg,PNG,PG,147.1,-9.3
+Peru,Lima,pe,PER,PE,-77.03,-12.03
+Pakistan,Islamabad,pk,PAK,PK,73.1,33.42
+Philippines,Manila,ph,PHL,PH,121,14.35
+Pitcairn,Adamstown,pn,PCN,PN,-130.05,-25.04
+Poland,Warsaw,pl,POL,PL,21,52.15
+Saint Pierre and Miquelon,Saint-Pierre,pm,SPM,PM,-56.11,46.46
+Zambia,Lusaka,zm,ZMB,ZM,28.17,-15.25
+Western Sahara,,eh,ESH,EH,-13,24.3
+Estonia,Tallinn,ee,EST,EE,24.43,59.26
+Egypt,Cairo,eg,EGY,EG,31.15,30.03
+South Africa,Pretoria,za,ZAF,ZA,28.13,-25.42
+Ecuador,Quito,ec,ECU,EC,-78.3,-0.13
+Italy,Rome,it,ITA,IT,12.29,41.54
+Vietnam,Hanoi,vn,VNM,VN,105.51,21.02
+Solomon Islands,Honiara,sb,SLB,SB,159.57,-9.26
+European Union,,eu,N/A,EU,9.9,50.1021
+Ethiopia,Addis Ababa,et,ETH,ET,38.42,9.02
+Somalia,Mogadishu,so,SOM,SO,45.22,2.04
+Zimbabwe,Harare,zw,ZWE,ZW,31.03,-17.5
+Saudi Arabia,Riyadh,sa,SAU,SA,46.43,24.38
+Spain,Madrid,es,ESP,ES,-3.41,40.24
+Eritrea,Asmara,er,ERI,ER,38.56,15.2
+Montenegro,Podgorica,me,MNE,ME,19.16,42.26
+Moldova,Chisinau,md,MDA,MD,28.51,47
+Madagascar,Antananarivo,mg,MDG,MG,47.31,-18.55
+Saint Martin,Marigot,mf,MAF,MF,-63.05,18.04
+Morocco,Rabat,ma,MAR,MA,-6.49,34.01
+Monaco,Monaco,mc,MCO,MC,7.25,43.44
+Uzbekistan,Tashkent,uz,UZB,UZ,69.18,41.2
+Myanmar,Rangoon,mm,MMR,MM,96.09,16.48
+Mali,Bamako,ml,MLI,ML,-8,12.39
+Macao,,mo,MAC,MO,113.33,22.1
+Mongolia,Ulaanbaatar,mn,MNG,MN,106.55,47.55
+Marshall Islands,Majuro,mh,MHL,MH,171.23,7.06
+Macedonia,Skopje,mk,MKD,MK,21.26,42
+Mauritius,Port Louis,mu,MUS,MU,57.29,-20.09
+Malta,Valletta,mt,MLT,MT,14.3,35.53
+Malawi,Lilongwe,mw,MWI,MW,33.47,-13.59
+Maldives,Male,mv,MDV,MV,73.3,4.1
+Northern Mariana Islands,Saipan,mp,MNP,MP,145.45,15.12
+Montserrat,Plymouth,ms,MSR,MS,-62.13,16.42
+Mauritania,Nouakchott,mr,MRT,MR,-16.02,18.07
+Isle of Man,Douglas,im,IMN,IM,-4.29,54.09
+Uganda,Kampala,ug,UGA,UG,32.25,0.19
+Malaysia,Kuala Lumpur,my,MYS,MY,101.42,3.1
+Mexico,Mexico City,mx,MEX,MX,-99.08,19.26
+Israel,Jerusalem,il,ISR,IL,35.14,31.46
+France,Paris,fr,FRA,FR,2.2,48.52
+British Indian Ocean Territory,,io,IOT,IO,71.3,-6
+Saint Helena Ascension and Tristan da Cunha,Jamestown,sh,SHN,SH,-5.44,-15.56
+Finland,Helsinki,fi,FIN,FI,24.56,60.1
+Fiji,Suva,fj,FJI,FJ,178.25,-18.08
+Falkland Islands,Stanley,fk,FLK,FK,-57.51,-51.42
+Micronesia,Palikir,fm,FSM,FM,158.09,6.55
+Faroe Islands,Torshavn,fo,FRO,FO,-6.46,62.01
+Nicaragua,Managua,ni,NIC,NI,-86.17,12.09
+Netherlands,Amsterdam,nl,NLD,NL,4.54,52.23
+Norway,Oslo,no,NOR,NO,10.45,59.55
+Namibia,Windhoek,na,NAM,NA,17.05,-22.34
+Vanuatu,Port-Vila,vu,VUT,VU,168.19,-17.44
+New Caledonia,Noumea,nc,NCL,NC,166.27,-22.16
+Niger,Niamey,ne,NER,NE,2.07,13.31
+Norfolk Island,Kingston,nf,NFK,NF,167.58,-29.03
+Nigeria,Abuja,ng,NGA,NG,7.32,9.05
+New Zealand,Wellington,nz,NZL,NZ,174.51,-41.28
+Nepal,Kathmandu,np,NPL,NP,85.19,27.43
+Nauru,,nr,NRU,NR,166.55,-0.32
+Niue,Alofi,nu,NIU,NU,-169.55,-19.01
+Cook Islands,Avarua,ck,COK,CK,-159.46,-21.12
+Ivory Coast,Yamoussoukro,ci,CIV,CI,-5.17,6.49
+Switzerland,Bern,ch,CHE,CH,7.26,46.57
+Colombia,Bogota,co,COL,CO,-74.05,4.36
+China,Beijing,cn,CHN,CN,116.23,39.55
+Cameroon,Yaounde,cm,CMR,CM,11.31,3.52
+Chile,Santiago,cl,CHL,CL,-70.4,-33.27
+Cocos Islands,West Island,cc,CCK,CC,96.5,-12.1
+Canada,Ottawa,ca,CAN,CA,-75.42,45.25
+Congo Republic,Brazzaville,cg,COG,CG,15.17,-4.15
+Central African Republic,Bangui,cf,CAF,CF,18.35,4.22
+Congo Democratic Republic,Kinshasa,cd,COD,CD,15.18,-4.19
+Czech Republic,Prague,cz,CZE,CZ,14.28,50.05
+Cyprus,Nicosia,cy,CYP,CY,33.22,35.1
+Christmas Island,The Settlement,cx,CXR,CX,105.43,-10.25
+Costa Rica,San Jose,cr,CRI,CR,-84.05,9.56
+Cape Verde,Praia,cv,CPV,CV,-23.31,14.55
+Cuba,Havana,cu,CUB,CU,-82.21,23.07
+Swaziland,Mbabane,sz,SWZ,SZ,31.06,-26.18
+Syria,Damascus,sy,SYR,SY,36.18,33.3
+Kyrgyzstan,Bishkek,kg,KGZ,KG,74.36,42.52
+Kenya,Nairobi,ke,KEN,KE,36.49,-1.17
+Suriname,Paramaribo,sr,SUR,SR,-55.1,5.5
+Kiribati,Tarawa,ki,KIR,KI,172.58,1.19
+Cambodia,Phnom Penh,kh,KHM,KH,104.55,11.33
+Saint Kitts and Nevis,Basseterre,kn,KNA,KN,-62.43,17.18
+Comoros,Moroni,km,COM,KM,43.14,-11.42
+Sao Tome and Principe,Sao Tome,st,STP,ST,6.39,0.12
+Slovakia,Bratislava,sk,SVK,SK,17.07,48.09
+Korea South,Seoul,kr,KOR,KR,126.59,37.33
+Slovenia,Ljubljana,si,SVN,SI,14.31,46.03
+Korea North,Pyongyang,kp,PRK,KP,125.45,39.01
+Kuwait,Kuwait City,kw,KWT,KW,47.58,29.22
+Senegal,Dakar,sn,SEN,SN,-17.26,14.4
+San Marino,San Marino,sm,SMR,SM,12.25,43.56
+Sierra Leone,Freetown,sl,SLE,SL,-13.15,8.3
+Seychelles,Victoria,sc,SYC,SC,55.27,-4.38
+Kazakhstan,Astana,kz,KAZ,KZ,71.25,51.1
+Cayman Islands,George Town,ky,CYM,KY,-81.23,19.18
+Singapore,Singapore,sg,SGP,SG,103.51,1.17
+Sweden,Stockholm,se,SWE,SE,18.03,59.2
+Sudan,Khartoum,sd,SDN,SD,32.32,15.36
+Dominican Republic,Santo Domingo,do,DOM,DO,-69.54,18.28
+Dominica,Roseau,dm,DMA,DM,-61.24,15.18
+Djibouti,Djibouti,dj,DJI,DJ,43.09,11.35
+Denmark,Copenhagen,dk,DNK,DK,12.35,55.4
+British Virgin Islands,Road Town,vg,VGB,VG,-64.37,18.27
+Germany,Berlin,de,DEU,DE,13.24,52.31
+Yemen,Sanaa,ye,YEM,YE,44.12,15.21
+Algeria,Algiers,dz,DZA,DZ,3.03,36.45
+United States,"Washington, DC",us,USA,US,-77.02,38.53
+Uruguay,Montevideo,uy,URY,UY,-56.11,-34.53
+Mayotte,Mamoudzou,yt,MYT,YT,45.13,-12.46
+Lebanon,Beirut,lb,LBN,LB,35.3,33.52
+Saint Lucia,Castries,lc,LCA,LC,-61,14.01
+Laos,Vientiane,la,LAO,LA,102.36,17.58
+Tuvalu,Funafuti,tv,TUV,TV,179.12,-8.3
+Taiwan,Taipei,tw,TWN,TW,121.3,25.03
+Trinidad and Tobago,Port-of-Spain,tt,TTO,TT,-61.31,10.39
+Turkey,Ankara,tr,TUR,TR,32.52,39.56
+Sri Lanka,Colombo,lk,LKA,LK,79.51,6.56
+Liechtenstein,Vaduz,li,LIE,LI,9.31,47.08
+Latvia,Riga,lv,LVA,LV,24.06,56.57
+Tonga,Nuku'alofa,to,TON,TO,-175.12,-21.08
+Lithuania,Vilnius,lt,LTU,LT,25.19,54.41
+Luxembourg,Luxembourg,lu,LUX,LU,6.07,49.36
+Liberia,Monrovia,lr,LBR,LR,-10.48,6.18
+Lesotho,Maseru,ls,LSO,LS,27.29,-29.19
+Thailand,Bangkok,th,THA,TH,100.31,13.45
+French Southern Territories,,tf,ATF,TF,77.32,-37.5
+Togo,Lome,tg,TGO,TG,1.13,6.08
+Chad,N'Djamena,td,TCD,TD,15.02,12.06
+Turks and Caicos Islands,Grand Turk,tc,TCA,TC,-71.08,21.28
+Libya,Tripoli,ly,LBY,LY,13.1,32.53
+Holy See,Vatican City,va,VAT,VA,12.27,41.54
+Saint Vincent and the Grenadines,Kingstown,vc,VCT,VC,-61.14,13.09
+United Arab Emirates,Abu Dhabi,ae,ARE,AE,54.22,24.28
+Andorra,Andorra la Vella,ad,AND,AD,1.31,42.3
+Antigua and Barbuda,Saint John's,ag,ATG,AG,-61.51,17.07
+Afghanistan,Kabul,af,AFG,AF,69.11,34.31
+Anguilla,The Valley,ai,AIA,AI,-63.03,18.13
+Virgin Islands,Charlotte Amalie,vi,VIR,VI,-64.56,18.21
+Iceland,Reykjavik,is,ISL,IS,-21.57,64.09
+Iran,Tehran,ir,IRN,IR,51.25,35.4
+Armenia,Yerevan,am,ARM,AM,44.3,40.1
+Albania,Tirana,al,ALB,AL,19.49,41.19
+Angola,Luanda,ao,AGO,AO,13.14,-8.5
+Netherlands Antilles,Willemstad,an,ANT,AN,-68.56,12.06
+Antarctica,,aq,ATA,AQ,0,-90
+Asia &amp; Pacific,,asia,N/A,AP,0,0
+American Samoa,Pago Pago,as,ASM,AS,-170.42,-14.16
+Argentina,Buenos Aires,ar,ARG,AR,-58.4,-34.36
+Australia,Canberra,au,AUS,AU,149.13,-35.17
+Austria,Vienna,at,AUT,AT,16.22,48.12
+Aruba,Oranjestad,aw,ABW,AW,-70.02,12.31
+India,New Delhi,in,IND,IN,77.12,28.36
+Tanzania,Dar es Salaam,tz,TZA,TZ,39.17,-6.48
+Azerbaijan,Baku,az,AZE,AZ,49.52,40.23
+Ireland,Dublin,ie,IRL,IE,-6.14,53.19
+Indonesia,Jakarta,id,IDN,ID,106.49,-6.1
+Ukraine,Kiew,ua,UKR,UA,30.554,50.441
+Qatar,Doha,qa,QAT,QA,51.32,25.17
+Mozambique,Maputo,mz,MOZ,MZ,32.35,-25.57
