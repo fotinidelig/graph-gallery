@@ -9,9 +9,9 @@ def _():
     import matplotlib.pyplot as plt
     import matplotlib as mpl
     import pandas as pd
-    from pypalettes import load_cmap
+    from pypalettes import load_cmap, create_cmap
     from highlight_text import fig_text, ax_text
-    from drawarrow import ax_arrow
+    from drawarrow import ax_arrow, fig_arrow
     import seaborn as sns
     import geopandas as gpd
     import cartopy.crs as ccrs
@@ -31,9 +31,10 @@ def _():
         ax_arrow,
         ax_text,
         ccrs,
+        create_cmap,
+        fig_arrow,
         fig_text,
         gpd,
-        load_cmap,
         load_google_font,
         mo,
         mpl,
@@ -62,7 +63,7 @@ def _():
 
 
 @app.cell
-def _(Path, load_cmap, mpl, pd, re):
+def _(Path, create_cmap, mpl, pd, re):
     # Get data from files into dictionaries
     CURRENT_DIR = Path(__file__).resolve().parent
 
@@ -112,22 +113,38 @@ def _(Path, load_cmap, mpl, pd, re):
     fire_df = fire_df.merge(emision_df, left_on=['Year', 'Code'], right_on=['Year', 'Code'])
 
     # Create column for bubble sizes based on burned area
-    min_s, max_s = 10, 200
+    min_s, max_s = 90, 400
     max_ba = fire_df['Burned Area (ha)'].max()
     min_ba = fire_df['Burned Area (ha)'].min()
     fire_df = fire_df.assign(
         bubble_size=lambda x: min_s + (x['Burned Area (ha)']-min_ba)*(max_s-min_s)/(max_ba-min_ba)
     )
     # Create column for bubble color based on number of fires
-    colormap = load_cmap('pal12', cmap_type='continuous', reverse=False)
+    # colormap = load_cmap('pal12', cmap_type='continuous', reverse=False)
+    colormap = create_cmap(
+        colors=["#f2e661", "#f2793d", "#a61111"],
+        cmap_type="continuous",
+    )
 
     norm = mpl.colors.Normalize(
         vmin=fire_df["Number of Fires"].min(),
         vmax=fire_df["Number of Fires"].max()
     )
     sm = mpl.cm.ScalarMappable(cmap=colormap, norm=norm)
-    fire_df['bubble_color'] = fire_df['Number of Fires'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
-    return CURRENT_DIR, DATA_DIR, fire_df, max_ba, max_s, min_ba, min_s, sm
+    # fire_df['bubble_color'] = fire_df['Number of Fires'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
+    # set color for burned area too
+    fire_df['bubble_color'] = fire_df['Burned Area (ha)'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
+    return (
+        CURRENT_DIR,
+        DATA_DIR,
+        colormap,
+        fire_df,
+        max_ba,
+        max_s,
+        min_ba,
+        min_s,
+        norm,
+    )
 
 
 @app.cell
@@ -161,6 +178,8 @@ def _(
     ImageSequence,
     ax_arrow,
     ax_text,
+    colormap,
+    fig_arrow,
     fig_text,
     fire_df,
     load_google_font,
@@ -168,21 +187,21 @@ def _(
     max_s,
     min_ba,
     min_s,
+    norm,
     np,
     plt,
     set_default_font,
-    sm,
     world,
 ):
     # GLOBAL UNCHANGED ATTRIBUTES
     font = load_google_font("Space Mono", weight="regular", italic=True)
     bold_font = load_google_font("Space Mono", weight="bold", italic=True)
     set_default_font(font)
-    background = '#a6bddb'
+    background = '#d9e9ff'
     details_color = '#3c4856'
-    annot_color = '#683a3a'
-    muted_color = '#a0acbd'
-    bubble_alpha = .4
+    annot_color = '#cc0077'#'#683a3a'
+    muted_color = '#aabbcc'
+    bubble_alpha = .6
 
     yearly_ba = fire_df.groupby(['Year'])['Burned Area (ha)'].sum().reset_index()
     max_ba_year = int(yearly_ba.loc[yearly_ba['Burned Area (ha)'].idxmax(), 'Year'])
@@ -201,11 +220,18 @@ def _(
     _ax.set_facecolor(background)
 
     # Elements that need update
-    cbar = _fig.colorbar(sm, ax=_ax)
+    # cbar = _fig.colorbar(sm, ax=_ax)
+
+    year_fire_world = world.merge(fire_df, left_on='adm0_a3', right_on='Code')
+
+    per_year_max_burned = (year_fire_world.loc[
+        year_fire_world.groupby('Year')['Burned Area (ha)'].idxmax(), ['Burned Area (ha)', 'Year', 'Code', 'lat', 'lon']].
+        reset_index(drop=True))
+    years = fire_df['Year'].unique().tolist()
 
     def update(frame):
         '''frame: the year in our case'''
-        global cbar
+        # global cbar
 
         _ax.clear()
         _ax.set_position([0, 0, 1, 1])  # [left, bottom, width, height]
@@ -214,29 +240,57 @@ def _(
         _ax.set_ylim(.17*1e7, .77*1e7)
 
         YEAR = frame
-        year_fire_df = fire_df[fire_df['Year'] == YEAR]
-        year_fire_world = world.merge(year_fire_df, left_on='adm0_a3', right_on='Code')
-        world.plot(ax=_ax, color=muted_color)
-        year_fire_world.plot(ax=_ax, color='grey', edgecolor=details_color, linewidth=.2)
+        year_data = year_fire_world[year_fire_world['Year'] == YEAR]
+        world.plot(ax=_ax, color='#d9d9d9')
+        year_data.plot(ax=_ax, color='#000022', edgecolor=details_color, linewidth=.2)
 
         # Bubbles for fire data
-        x = year_fire_world['lon'].values
-        y = year_fire_world['lat'].values
+        x = year_data['lon'].values
+        y = year_data['lat'].values
 
-        scatter = _ax.scatter(x, y, s=year_fire_world['bubble_size'], alpha=bubble_alpha, 
-                              c=year_fire_world['bubble_color'], 
+        scatter = _ax.scatter(x, y, s=year_data['bubble_size'], alpha=bubble_alpha, 
+                              c=year_data['bubble_color'], 
                               linewidth=1.5,)
 
+        countries_text_kw = dict(color=details_color, bbox=dict(facecolor=(1,1,1,1), 
+                                    edgecolor='none', pad=1), textalign='left')
         # Annotate Greece's largest fires
+        gr_color = '#003cb3'
         if YEAR >= GR_max_ba_year:
-            gr_x = year_fire_world.loc[year_fire_world['Code'] == 'GRC', 'lon'].values[0]
-            gr_y = year_fire_world.loc[year_fire_world['Code'] == 'GRC', 'lat'].values[0]
-            ax_text(ax=_ax, x=gr_x, y=gr_y*1.18, 
-                    s=f'Greece saw its largest fires \nduring <{GR_max_ba_year}>: <{int(GR_max_ba/1000)}k> hectares \nwere burned',
-                   bbox=dict(facecolor=(1,1,1,0.4), edgecolor='none', pad=1),
-                   highlight_textprops=[{'font': bold_font}, {'font': bold_font}])
-            ax_arrow(head_position=[gr_x, gr_y], tail_position=[gr_x, gr_y*1.1], 
-                    radius=.6, head_length=5, fill_head=False, color=details_color)
+            gr_x = year_data.loc[year_data['Code'] == 'GRC', 'lon'].values[0]
+            gr_y = year_data.loc[year_data['Code'] == 'GRC', 'lat'].values[0]
+            ax_text(ax=_ax, x=gr_x-1e6, y=gr_y*1.35, 
+                   s=f'<Greece> saw its largest fires \nduring <{GR_max_ba_year}>, spanning <{int(GR_max_ba/1000)}k> hectares.\nComes <4th> with <914k> hectares burned.',
+                   highlight_textprops=[ {'color': gr_color}, {'font': bold_font}, {'font': bold_font}, {'font': bold_font}, {'font': bold_font}], **countries_text_kw)
+            ax_arrow(head_position=[gr_x, gr_y*1.02
+                                   ], tail_position=[gr_x, gr_y*1.22], 
+                    radius=.4, head_length=6, fill_head=True, color=gr_color, width=2.3)
+
+
+        # Algeria-DZA Annotations (2009, 2010, 2012), total of 527742 hectares
+
+        alg_lat = year_fire_world.loc[year_fire_world['Code'] == 'DZA', 'lat'].values[0]
+        alg_lon = year_fire_world.loc[year_fire_world['Code'] == 'DZA', 'lon'].values[0]
+        alg_color = "#ff0040"
+
+        if YEAR >= 2009:
+            _s = f"<Algeria> holds <1st> place within\nthe mediterranean region,\nwith <1.116k hectares> burned during this period."
+            fig_text(fig=_fig, x=.2, y=.25, s=_s,
+                    highlight_textprops=[ {'color': alg_color}, {'font': bold_font}, {'font': bold_font}],
+                    **countries_text_kw)
+            fig_arrow(head_position=[.35, .42], tail_position=[.3,.25], 
+                    radius=-.3, head_length=6, fill_head=True, color=alg_color, width=2.3)
+        # Spain-ESP Annotations (2006, 2011), total of 484983 hectares
+
+        esp_lat = year_fire_world.loc[year_fire_world['Code'] == 'ESP', 'lat'].values[0]
+        esp_lon = year_fire_world.loc[year_fire_world['Code'] == 'ESP', 'lon'].values[0]
+        esp_color = '#ffb700'
+
+        fig_text(fig=_fig, x=.05, y=.75, s=f"Big fires spread in <Spain>\nin 2006 and 2011. <2nd> in place,\n<1.469k hectares> have been burned.",
+                highlight_textprops=[ {'color': esp_color}, {'font': bold_font}, {'font': bold_font}],
+                **countries_text_kw)
+        fig_arrow(head_position=[.25, .53], tail_position=[.1,.67], 
+                    radius=.4, head_length=6, fill_head=True, color=esp_color, width=2.3)
 
         # Create simple line plot showing total burned area for all countries
         x = yearly_ba[yearly_ba['Year']<=YEAR]['Year'].values.tolist()
@@ -244,25 +298,26 @@ def _(
             mid_year = yearly_ba[yearly_ba['Year']<=YEAR]['Year'].mean()
             y = yearly_ba[yearly_ba['Year']<=YEAR]['Burned Area (ha)'].values.tolist()
 
-            yearly_ba_ax = _ax.inset_axes([.72, .03, .2, .2])
+            yearly_ba_ax = _ax.inset_axes([.74, .03, .22, .2])
             yearly_ba_ax.plot(x, y, color=details_color)
             yearly_ba_ax.fill_between(x, y, alpha=.5, color=details_color)
             yearly_ba_ax.scatter(x[-1], y[-1], color=details_color, zorder=1)
             yearly_ba_ax.text(x[-1]+.5, y[-1], s=f"{int(max(y)/1000)}k", color=details_color, size=8)
 
-            yearly_ba_ax.set_ylim(min(y), max(y)*1.6)
+            yearly_ba_ax.set_ylim(min(y), max(y)*1.7)
+            # yearly_ba_ax.set_xlim(min(x)-1, max(x)+1)
             yearly_ba_ax.text(
-                0.5, .89, " Total burned area (ha)",
+                0.5, .87, " Yearly burned hectares",
                 transform=yearly_ba_ax.transAxes,
                 ha='center', va='bottom',
-                fontsize=8, color=details_color,
+                fontsize=9, color=details_color,
             )
             yearly_ba_ax.set_xticks([min(x), max(x)],[min(x), max(x)])
             yearly_ba_ax.set_yticks([])
             yearly_ba_ax.tick_params(labelsize=7, length=2, labelcolor=details_color,
                                 color=details_color, pad=1) 
             yearly_ba_ax.spines[['bottom','top','right', 'left']].set_visible(False)
-            yearly_ba_ax.set_facecolor((1, 1, 1, 0.4))
+            yearly_ba_ax.set_facecolor((1, 1, 1, 0.9))
 
             # Custom annotations for specific years
             if YEAR >= max_ba_year:
@@ -276,31 +331,35 @@ def _(
                 yearly_ba_ax.vlines(x=max_ba_year, ymin=min(y), ymax=max_ba_yearly, 
                                     color=annot_color, linestyles='dashed')
 
-        # Add the colorbar explaining number of fires values to a sub axis
-        bar_ax = _ax.inset_axes([.93, .67, .1, .3])
-        bar_ax.axis('off')
-        cbar.remove()
-        cbar = _fig.colorbar(sm, ax=bar_ax, fraction=1)
-        # sm.set_norm(mpl.colors.Normalize(
-        #     vmin=year_fire_world["Number of Fires"].min(),
-        #     vmax=year_fire_world["Number of Fires"].max()
-        # ))
+        # Add the colorbar explaing number of fires values to a sub axis
+        # bar_ax = _ax.inset_axes([.93, .67, .1, .3])
+        # bar_ax.axis('off')
+        # cbar.remove()
+        # cbar = _fig.colorbar(sm, ax=bar_ax, fraction=1)
+        # sm.set_norm(mpl.colors.Normalize(vmin=year_data["Number of Fires"].min(),
+        #     vmax=year_data["Number of Fires"].max() ))
         # cbar.update_normal(sm)
-        cbar.outline.set_visible(False) 
-        cbar.ax.tick_params(labelsize=7, length=0, labelcolor=details_color,
-                            color=details_color, pad=1) 
-        cbar.set_label("Number of Fires", size=8, color=details_color)
-        cbar.ax.yaxis.set_label_position("left")
+        # cbar.outline.set_visible(False) 
+        # cbar.ax.tick_params(labelsize=7, length=0, labelcolor=details_color,
+        #                     color=details_color, pad=1) 
+        # cbar.set_label("Number of Fires", size=8, color=details_color)
+        # cbar.ax.yaxis.set_label_position("left")
 
         # Add legend for bubble size
-        bubble_ax = _ax.inset_axes([.81, .67, .1, .3])
+        # bubble_ax = _ax.inset_axes([.81, .67, .1, .3])
+        bubble_ax = _ax.inset_axes([.9, .7, .1, .3])
         _x = [0.2, 0.2, 0.2, 0.2]
         _y = [.15, .25, .35, .45]
 
+        n = 4 # number of bubbles on legend
         bubble_ax.set_xlim(0.1, .5)
         bubble_ax.set_ylim(0, .58)
-        b_sizes = np.linspace(min_s+(max_s-min_s)/3, max_s, 4)
-        bubble_ax.scatter(_x, _y, s=b_sizes, color=details_color, alpha=bubble_alpha)
+        b_sizes = np.linspace(min_s+(max_s-min_s)/3, max_s, n)
+
+        values = np.linspace(norm.vmin, norm.vmax, n)
+        legend_colors = [colormap(norm(v)) for v in values]
+
+        bubble_ax.scatter(_x, _y, s=b_sizes, color=legend_colors, alpha=bubble_alpha)
         bubble_ax.set_facecolor((0, 0, 0, 0))
         for spine in bubble_ax.spines.values():
             spine.set_visible(False)
@@ -320,20 +379,21 @@ def _(
         ]
 
         for i, lab in enumerate(b_labels):
-            bubble_ax.text(x=.26, y=_y[i], s=lab, size=7, color=details_color, va='center',)
+            bubble_ax.text(x=.28, y=_y[i], s=lab, size=7, color=details_color, va='center',)
 
-        ax_text(ax=_ax, x=.5, y=.87, s=f'Year: <{YEAR}>', size=13, color=details_color, 
+        ax_text(ax=_ax, x=.5, y=.87, s=f'Year: <{YEAR}>', size=15, color=details_color, 
                 highlight_textprops=[{'font': bold_font}], va='center', ha='center',
                 annotationbbox_kw={'boxcoords': _fig.transFigure},
-                bbox=dict(facecolor=(1,1,1,0.4), edgecolor='none', pad=.3))
+                # bbox=dict(facecolor=(1,1,1,0.4), edgecolor='none', pad=.3)
+               )
 
-        fig_text(fig=_fig, x=.5, y=.9, s=f'Fires in mediterranean countries \nshow an <increasing trend> after <2019>',
-                va='bottom', ha='center', color=details_color, size=15, textalign='center',
+        fig_text(fig=_fig, x=.5, y=.9, s=f'Fires in mediterranean countries (2006-2023) \nshow an <increasing trend> after <2019>',
+                va='bottom', ha='center', color=details_color, size=16, textalign='center',
                 highlight_textprops=[{'font': bold_font}, {'font': bold_font}], clip_on=False)
 
         return _ax
 
-    years = fire_df['Year'].unique().tolist()#[:7]
+
     ani = FuncAnimation(
         fig=_fig,
         func=update,
@@ -364,6 +424,24 @@ def _(
         frame.info['duration'] = frame_duration
 
     frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0)
+    return per_year_max_burned, year_fire_world
+
+
+@app.cell
+def _(year_fire_world):
+    year_fire_world.loc[year_fire_world['Code']=='DZA', ['Year', 'Burned Area (ha)', 'lat', 'lon']].sort_values(by='Burned Area (ha)')
+    return
+
+
+@app.cell
+def _(per_year_max_burned):
+    per_year_max_burned
+    return
+
+
+@app.cell
+def _(year_fire_world):
+    year_fire_world.groupby('Code')['Burned Area (ha)'].sum().sort_values()
     return
 
 
