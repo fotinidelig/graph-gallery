@@ -35,6 +35,7 @@ def _():
         fig_arrow,
         fig_text,
         gpd,
+        load_cmap,
         load_google_font,
         mo,
         mpl,
@@ -68,9 +69,9 @@ def _(Path, create_cmap, mpl, pd, re):
     CURRENT_DIR = Path(__file__).resolve().parent
 
     # Navigate relative to this file’s location
-    DATA_DIR = CURRENT_DIR.parent.parent / "data" / "fire-data"
+    DATA_DIR = CURRENT_DIR / "fire-data"
     pattern = re.compile(r'estimates-by-country_([A-Z]{3})_2006_2024')
-
+    print(DATA_DIR)
     country_dfs: dict[str, pd.DataFrame] = {}
 
     MIN_YEAR, MAX_YEAR = 2006, 2023
@@ -194,8 +195,9 @@ def _(
     world,
 ):
     # GLOBAL UNCHANGED ATTRIBUTES
-    font = load_google_font("Space Mono", weight="regular", italic=True)
-    bold_font = load_google_font("Space Mono", weight="bold", italic=True)
+    font = load_google_font("Space Mono", weight="regular", italic=False)
+    bold_font = load_google_font("Space Mono", weight="bold", italic=False)
+    italic_font = load_google_font("Space Mono", weight="regular", italic=True)
     set_default_font(font)
     background = '#d9e9ff'
     details_color = '#3c4856'
@@ -263,7 +265,7 @@ def _(
                    s=f'<Greece> saw its largest fires \nduring <{GR_max_ba_year}>, spanning <{int(GR_max_ba/1000)}k> hectares.\nComes <4th> with <914k> hectares burned.',
                    highlight_textprops=[ {'color': gr_color}, {'font': bold_font}, {'font': bold_font}, {'font': bold_font}, {'font': bold_font}], **countries_text_kw)
             ax_arrow(head_position=[gr_x, gr_y*1.02
-                                   ], tail_position=[gr_x, gr_y*1.22], 
+                                   ], tail_position=[gr_x, gr_y*1.23], 
                     radius=.4, head_length=6, fill_head=True, color=gr_color, width=2.3)
 
 
@@ -289,7 +291,7 @@ def _(
         fig_text(fig=_fig, x=.05, y=.75, s=f"Big fires spread in <Spain>\nin 2006 and 2011. <2nd> in place,\n<1.469k hectares> have been burned.",
                 highlight_textprops=[ {'color': esp_color}, {'font': bold_font}, {'font': bold_font}],
                 **countries_text_kw)
-        fig_arrow(head_position=[.25, .53], tail_position=[.1,.67], 
+        fig_arrow(head_position=[.25, .53], tail_position=[.1,.66], 
                     radius=.4, head_length=6, fill_head=True, color=esp_color, width=2.3)
 
         # Create simple line plot showing total burned area for all countries
@@ -302,7 +304,7 @@ def _(
             yearly_ba_ax.plot(x, y, color=details_color)
             yearly_ba_ax.fill_between(x, y, alpha=.5, color=details_color)
             yearly_ba_ax.scatter(x[-1], y[-1], color=details_color, zorder=1)
-            yearly_ba_ax.text(x[-1]+.5, y[-1], s=f"{int(max(y)/1000)}k", color=details_color, size=8)
+            yearly_ba_ax.text(x[-1]+.5, y[-1], s=f"{int(y[-1]/1000)}k", color=details_color, size=8)
 
             yearly_ba_ax.set_ylim(min(y), max(y)*1.7)
             # yearly_ba_ax.set_xlim(min(x)-1, max(x)+1)
@@ -321,15 +323,17 @@ def _(
 
             # Custom annotations for specific years
             if YEAR >= max_ba_year:
-                ax_text(ax=yearly_ba_ax, x=max_ba_year, y=max_ba_yearly*1.1, 
-                        s=f'<{max_ba_year}> saw the \n<most> burned area', 
-                      color=annot_color, va='bottom', ha='center', textalign='center', clip_on=False, size=7, 
-                        highlight_textprops=[{'font': bold_font}, {'font': bold_font}])
-
-            if YEAR >= max_ba_year:
+                yearly_ba_ax.text(max_ba_year, max_ba_yearly*1.1, 
+                                  s=f"{str(max_ba_year)}: {int(max_ba_yearly/1000)}k", 
+                                  ha='center', color=annot_color, size=8)
+                # ax_text(ax=yearly_ba_ax, x=max_ba_year, y=max_ba_yearly*1.1, 
+                #         s=f'<{max_ba_year}> saw the \n<most> burned area', 
+                #       color=annot_color, va='bottom', ha='center', textalign='center', clip_on=False, size=7, 
+                #         highlight_textprops=[{'font': bold_font}, {'font': bold_font}])
                 yearly_ba_ax.scatter(max_ba_year, max_ba_yearly, color=annot_color, zorder=1)
                 yearly_ba_ax.vlines(x=max_ba_year, ymin=min(y), ymax=max_ba_yearly, 
                                     color=annot_color, linestyles='dashed')
+                # yearly_ba_ax.set_xticks([min(x), max_ba_year, max(x)],[min(x), max_ba_year, max(x)])
 
         # Add the colorbar explaing number of fires values to a sub axis
         # bar_ax = _ax.inset_axes([.93, .67, .1, .3])
@@ -423,8 +427,9 @@ def _(
 
         frame.info['duration'] = frame_duration
 
+    frames[-1].save(CURRENT_DIR / 'preview.png')
     frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0)
-    return per_year_max_burned, year_fire_world
+    return italic_font, per_year_max_burned, year_fire_world
 
 
 @app.cell
@@ -442,6 +447,101 @@ def _(per_year_max_burned):
 @app.cell
 def _(year_fire_world):
     year_fire_world.groupby('Code')['Burned Area (ha)'].sum().sort_values()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### Multi-line plot of Countries with highest burned area loses""")
+    return
+
+
+@app.cell
+def _(fire_df, world):
+    # get first 9 countries, ranked by burned area
+    codes = fire_df.groupby('Code')['Burned Area (ha)'].sum().sort_values(ascending=False).index.values[:9]
+    subset_data = fire_df.loc[fire_df['Code'].isin(codes), ['Burned Area (ha)', 'Code', 'Year']]
+
+    order_map = {code: i for i, code in enumerate(codes)}
+    countries = (
+        world[world['adm0_a3'].isin(codes)]
+        .assign(order=lambda df: df['adm0_a3'].map(order_map))
+        .sort_values("order")
+        ['name']
+        .values
+    )
+
+    codes, countries
+    return codes, countries, subset_data
+
+
+@app.cell
+def _(
+    CURRENT_DIR,
+    codes,
+    countries,
+    fig_text,
+    italic_font,
+    load_cmap,
+    plt,
+    subset_data,
+):
+    def multi_line_plot():
+        colors = load_cmap('Autumn', reverse=True).colors
+
+        background_color = '#d9e9ff'
+        details_color = '#3c4856'
+        annot_color = '#cc0077'#'#683a3a'
+        muted_color = '#aabbcc'
+        alpha = .6
+
+        fig, axs = plt.subplots(nrows=3, ncols=3, figsize=(10, 7), layout='tight')
+
+        code_country = dict(zip(codes, countries))
+        color_map = dict(zip(codes, colors))
+
+        # Fix an off-color of Algeria (DZA)
+        color_map['SYR'] = '#774762FF'
+
+        max_burned_area = subset_data['Burned Area (ha)'].max()
+
+        for code, ax in zip(codes, axs.flat):
+            country = code_country[code]
+            x = subset_data[subset_data['Code']==code]['Year'].values
+            y = subset_data[subset_data['Code']==code]['Burned Area (ha)']
+
+            ax.plot(x, y, color=color_map[code], zorder=1, linewidth=2.3)
+            ax.text(x=2015, y=max_burned_area*.9, s=country.capitalize(), 
+                  size=11, weight='bold', ha='center', va='center',
+                  color=color_map[code])
+
+            other_countries = subset_data[subset_data['Code'] != code]['Code']
+            for other_country in other_countries:
+                y = subset_data.loc[subset_data['Code'] == other_country, 'Burned Area (ha)']
+                ax.plot(x, y, color=muted_color, linewidth=.5, zorder=-1)
+
+            ax.tick_params(length=0, labelsize=7)
+            ax.grid(axis='y', alpha=.3, ls='--')
+            # ax.set_xlim("2020-01-01", "2024-01-01")
+            ax.spines[["top", "right", "bottom"]].set_visible(False)
+            ax.set_xticks(
+                [2006, 2015, 2023],
+                labels=[2006, 2015, 2023]
+            )
+            yvals = [50000, 100000, 150000, 200000, 250000, 300000]
+            ax.set_yticks(yvals, [f"{v/1000:.0f}k" for v in yvals])
+
+            ax.set_facecolor(background_color)
+        fig.set_facecolor(background_color)
+        fig_text(x=.5, y=.99, s='Each mediterranean country has its\nunique profile when it comes to yearly fires',
+                color=details_color, size=15, ha='center', textalign='center')
+
+        fig_text(x=.5, y=.06, s='Top 9 countries rated by their total area burned between 2006 and 2023,\ntop-right to bottom-left',
+                color=details_color, size=11, ha='center', textalign='center', font=italic_font)
+        plt.savefig(CURRENT_DIR / 'multi_line_plot.svg')
+        plt.show()
+
+    multi_line_plot()
     return
 
 
