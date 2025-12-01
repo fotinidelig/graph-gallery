@@ -59,11 +59,6 @@ def _(mo):
 
 
 @app.cell
-def _():
-    return
-
-
-@app.cell
 def _(Path, create_cmap, mpl, pd, re):
     # Get data from files into dictionaries
     CURRENT_DIR = Path(__file__).resolve().parent
@@ -123,29 +118,21 @@ def _(Path, create_cmap, mpl, pd, re):
     # Create column for bubble color based on number of fires
     # colormap = load_cmap('pal12', cmap_type='continuous', reverse=False)
     colormap = create_cmap(
-        colors=["#f2e661", "#f2793d", "#a61111"],
+        colors=["#f2e661", "#f2793d", "#a61111", "#6A0B0B"],
         cmap_type="continuous",
     )
 
     norm = mpl.colors.Normalize(
-        vmin=fire_df["Number of Fires"].min(),
-        vmax=fire_df["Number of Fires"].max()
+        vmin=fire_df["Burned Area (ha)"].min(),
+        vmax=fire_df["Burned Area (ha)"].max()
     )
     sm = mpl.cm.ScalarMappable(cmap=colormap, norm=norm)
+
     # fire_df['bubble_color'] = fire_df['Number of Fires'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
     # set color for burned area too
-    fire_df['bubble_color'] = fire_df['Burned Area (ha)'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
-    return (
-        CURRENT_DIR,
-        DATA_DIR,
-        colormap,
-        fire_df,
-        max_ba,
-        max_s,
-        min_ba,
-        min_s,
-        norm,
-    )
+    fire_df['color'] = fire_df['Burned Area (ha)'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
+
+    return CURRENT_DIR, DATA_DIR, colormap, fire_df, max_s, norm
 
 
 @app.cell
@@ -184,10 +171,7 @@ def _(
     fig_text,
     fire_df,
     load_google_font,
-    max_ba,
     max_s,
-    min_ba,
-    min_s,
     norm,
     np,
     plt,
@@ -199,6 +183,7 @@ def _(
     bold_font = load_google_font("Space Mono", weight="bold", italic=False)
     italic_font = load_google_font("Space Mono", weight="regular", italic=True)
     set_default_font(font)
+
     background = '#d9e9ff'
     details_color = '#3c4856'
     annot_color = '#cc0077'#'#683a3a'
@@ -215,7 +200,7 @@ def _(
     GR_max_ba_year = int(GR_fire_df.loc[GR_fire_df['Burned Area (ha)'].idxmax(), 'Year'])
     GR_max_ba = GR_fire_df['Burned Area (ha)'].max()
 
-    _fig, _ax = plt.subplots(figsize=(8, 6), dpi=150,)
+    _fig, _ax = plt.subplots(figsize=(8, 6), dpi=100,)
     _fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     _fig.set_facecolor(background)
@@ -244,15 +229,17 @@ def _(
         YEAR = frame
         year_data = year_fire_world[year_fire_world['Year'] == YEAR]
         world.plot(ax=_ax, color='#d9d9d9')
-        year_data.plot(ax=_ax, color='#000022', edgecolor=details_color, linewidth=.2)
+
+        year_country_colors = year_data['color']
+        year_data.plot(ax=_ax, color=year_country_colors, edgecolor=details_color, linewidth=.2) #'#000022',
 
         # Bubbles for fire data
         x = year_data['lon'].values
         y = year_data['lat'].values
 
-        scatter = _ax.scatter(x, y, s=year_data['bubble_size'], alpha=bubble_alpha, 
-                              c=year_data['bubble_color'], 
-                              linewidth=1.5,)
+        # scatter = _ax.scatter(x, y, s=year_data['bubble_size'], alpha=bubble_alpha, 
+        #                       c=year_data['color'], 
+        #                       linewidth=1.5,)
 
         countries_text_kw = dict(color=details_color, bbox=dict(facecolor=(1,1,1,1), 
                                     edgecolor='none', pad=1), textalign='left')
@@ -296,7 +283,7 @@ def _(
 
         # Create simple line plot showing total burned area for all countries
         x = yearly_ba[yearly_ba['Year']<=YEAR]['Year'].values.tolist()
-        if len(x) >= 2:
+        if len(x) >= 1:
             mid_year = yearly_ba[yearly_ba['Year']<=YEAR]['Year'].mean()
             y = yearly_ba[yearly_ba['Year']<=YEAR]['Burned Area (ha)'].values.tolist()
 
@@ -358,12 +345,14 @@ def _(
         n = 4 # number of bubbles on legend
         bubble_ax.set_xlim(0.1, .5)
         bubble_ax.set_ylim(0, .58)
-        b_sizes = np.linspace(min_s+(max_s-min_s)/3, max_s, n)
+        # b_sizes = np.linspace(min_s+(max_s-min_s)/3, max_s, n)
 
-        values = np.linspace(norm.vmin, norm.vmax, n)
+        values = np.linspace(norm.vmin, norm.vmax, n+1)
+        min_val = values[0]
+        values = values[1:]
         legend_colors = [colormap(norm(v)) for v in values]
 
-        bubble_ax.scatter(_x, _y, s=b_sizes, color=legend_colors, alpha=bubble_alpha)
+        bubble_ax.scatter(_x, _y, s=max_s, color=legend_colors, alpha=bubble_alpha)
         bubble_ax.set_facecolor((0, 0, 0, 0))
         for spine in bubble_ax.spines.values():
             spine.set_visible(False)
@@ -372,10 +361,11 @@ def _(
         )
         bubble_ax.set_ylabel('Burned Area (ha)', size=8, color=details_color,labelpad=0)
 
-        b_labels = (
-            (min_ba + (b_sizes - min_s) * (max_ba - min_ba) / \
-             (max_s - min_s))
-        ).astype(int)
+        # b_labels = (
+        #     (min_ba + (b_sizes - min_s) * (max_ba - min_ba) / \
+        #      (max_s - min_s))
+        # ).astype(int)
+        b_labels = values.astype(int)
         b_labels = [
             str(int(v/1000))+"k" if v > 1000 else
             str(v)
@@ -532,12 +522,14 @@ def _(
             ax.set_yticks(yvals, [f"{v/1000:.0f}k" for v in yvals])
 
             ax.set_facecolor(background_color)
+        
         fig.set_facecolor(background_color)
         fig_text(x=.5, y=.99, s='Each mediterranean country has its\nunique profile when it comes to yearly fires',
                 color=details_color, size=15, ha='center', textalign='center')
 
         fig_text(x=.5, y=.06, s='Top 9 countries rated by their total area burned between 2006 and 2023,\ntop-right to bottom-left',
                 color=details_color, size=11, ha='center', textalign='center', font=italic_font)
+    
         plt.savefig(CURRENT_DIR / 'multi_line_plot.svg')
         plt.show()
 
