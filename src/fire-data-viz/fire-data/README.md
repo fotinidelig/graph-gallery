@@ -1,16 +1,17 @@
-## Data Sources:
+## Data Sources
 
 ### World map for EU, Asia, and Africa:
-Downloaded through https://geojson-maps.kyd.au/ (medium resolution).
+Downloaded through [this link](https://geojson-maps.kyd.au/) (medium resolution).
 
 ### Lattitude, Longitude of capitals:
-Downloaded through https://github.com/Stefie/geojson-world/tree/master.
+Downloaded through [this link](https://github.com/Stefie/geojson-world/tree/master).
 
 ### Fire data:
-Downloaded through https://forest-fire.emergency.copernicus.eu/apps/effis.statistics/estimates for the following countries: Greece, Albania, Italy, France, Turkey, Croatia, Cyprus, ...
+Downloaded through [this link](https://forest-fire.emergency.copernicus.eu/apps/effis.statistics/estimates) for the following countries: Greece, Albania, Italy, France, Turkey, Croatia, Cyprus, ...
 
 ### Emission data:
-Downloaded data " Yearly Emissions & Burned Area (GFED) - [2002-2023]" through https://gwis.jrc.ec.europa.eu/apps/country.profile/charts/emi for the above countries.
+Downloaded data " Yearly Emissions & Burned Area (GFED) - [2002-2023]" through [this link](https://gwis.jrc.ec.europa.eu/apps/country.profile/charts/emi) for the above countries.
+
 
 ----
 

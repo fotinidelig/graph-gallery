@@ -131,7 +131,6 @@ def _(Path, create_cmap, mpl, pd, re):
     # fire_df['bubble_color'] = fire_df['Number of Fires'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
     # set color for burned area too
     fire_df['color'] = fire_df['Burned Area (ha)'].apply(lambda v: mpl.colors.to_hex(sm.to_rgba(v)))
-
     return CURRENT_DIR, DATA_DIR, colormap, fire_df, max_s, norm
 
 
@@ -249,7 +248,7 @@ def _(
             gr_x = year_data.loc[year_data['Code'] == 'GRC', 'lon'].values[0]
             gr_y = year_data.loc[year_data['Code'] == 'GRC', 'lat'].values[0]
             ax_text(ax=_ax, x=gr_x-1e6, y=gr_y*1.35, 
-                   s=f'<Greece> saw its largest fires \nduring <{GR_max_ba_year}>, spanning <{int(GR_max_ba/1000)}k> hectares.\nComes <4th> with <914k> hectares burned.',
+                   s=f'<Greece> saw its largest fires \nduring <{GR_max_ba_year}>, spanning <{int(GR_max_ba/1000)}k> hectares.\nComes <5th> with <914k> hectares burned.',
                    highlight_textprops=[ {'color': gr_color}, {'font': bold_font}, {'font': bold_font}, {'font': bold_font}, {'font': bold_font}], **countries_text_kw)
             ax_arrow(head_position=[gr_x, gr_y*1.02
                                    ], tail_position=[gr_x, gr_y*1.23], 
@@ -419,24 +418,12 @@ def _(
 
     frames[-1].save(CURRENT_DIR / 'preview.png')
     frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0)
-    return italic_font, per_year_max_burned, year_fire_world
+    return italic_font, year_fire_world
 
 
 @app.cell
 def _(year_fire_world):
     year_fire_world.loc[year_fire_world['Code']=='DZA', ['Year', 'Burned Area (ha)', 'lat', 'lon']].sort_values(by='Burned Area (ha)')
-    return
-
-
-@app.cell
-def _(per_year_max_burned):
-    per_year_max_burned
-    return
-
-
-@app.cell
-def _(year_fire_world):
-    year_fire_world.groupby('Code')['Burned Area (ha)'].sum().sort_values()
     return
 
 
@@ -522,23 +509,18 @@ def _(
             ax.set_yticks(yvals, [f"{v/1000:.0f}k" for v in yvals])
 
             ax.set_facecolor(background_color)
-        
+
         fig.set_facecolor(background_color)
         fig_text(x=.5, y=.99, s='Each mediterranean country has its\nunique profile when it comes to yearly fires',
                 color=details_color, size=15, ha='center', textalign='center')
 
         fig_text(x=.5, y=.06, s='Top 9 countries rated by their total area burned between 2006 and 2023,\ntop-right to bottom-left',
                 color=details_color, size=11, ha='center', textalign='center', font=italic_font)
-    
+
         plt.savefig(CURRENT_DIR / 'multi_line_plot.svg')
         plt.show()
 
     multi_line_plot()
-    return
-
-
-@app.cell
-def _():
     return
 
 
