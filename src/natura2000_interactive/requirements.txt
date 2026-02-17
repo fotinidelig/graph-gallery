@@ -1,0 +1,19 @@
+# Core dependencies for Natura 2000 Interactive Viz Project
+# Recommended stack: Plotly + Dash
+
+# Web framework
+dash>=2.14.0
+dash-bootstrap-components>=1.5.0
+
+# Visualization
+plotly>=5.18.0
+
+# Data processing
+pandas>=2.0.0
+geopandas>=0.14.0
+numpy>=1.24.0
+# Optional: For advanced styling
+# dash-mantine-components>=0.11.0  # Alternative to Bootstrap, more modern styling
+
+# Optional: For data server (if needed for large datasets)
+# dask>=2023.0.0
