@@ -10,15 +10,6 @@ Interactive data visualization project exploring Natura 2000 protected sites acr
 - **Dash**: Web app framework (Python-only, no JS required)
 - **Dash Bootstrap Components**: Professional UI components
 
-## Why This Stack?
-
-✅ **Elegant styling**: Full CSS control for creative, portfolio-worthy designs  
-✅ **Annotations & arrows**: Full support (similar to matplotlib)  
-✅ **Multiple graphs**: Flexible subplot layouts  
-✅ **Maps**: Excellent Mapbox integration for spatial data  
-✅ **Not too complex**: 2-3 day learning curve  
-✅ **Professional appearance**: Looks like a real product  
-
 ## Project Structure
 
 ```
@@ -30,7 +21,7 @@ natura2000_interactive/
 ├── data_loader.py               # Data loading utilities
 ├── visualizations.py            # Plot creation functions
 ├── habitat_colors.py            # Habitat color mappings
-├── export_gpkg_to_csv.py       # Script to export GeoPackage to CSV
+├── export_gpkg_to_csv.py       # Script to export Natura2000 GeoPackage data to CSV
 ├── dash_example.py              # Minimal Dash app example
 └── plotly_styling_example.py    # Examples of Plotly styling capabilities
 ```
@@ -58,6 +49,7 @@ pip install -r requirements.txt
 
 ### 2. Prepare Data
 
+First, download the GeoPackage of Natura2000 (the most recent one as of January 2026 is [here](https://sdi.eea.europa.eu/data/91357f39-7866-41ce-b447-43905c364ec8).  
 The app expects CSV files in the `data/natura2000_2024/csv/` directory. If you have a GeoPackage file (`Natura2000_end2024.gpkg`), you can export it to CSV using the provided script:
 
 ```bash
