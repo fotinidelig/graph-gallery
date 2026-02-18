@@ -626,8 +626,7 @@ def _(Path, countries, map_countries, pd):
 
 
 @app.cell
-def _(countries, habitat_country_cover, map_countries):
-    europe = map_countries[map_countries.iso_a2_eh.isin(countries)]
+def _(europe, habitat_country_cover):
     cluster_country_cover = (
         habitat_country_cover.groupby(["COUNTRY_CODE", "CLUSTER"])["COVER_KM"]
         .sum()
@@ -636,11 +635,11 @@ def _(countries, habitat_country_cover, map_countries):
 
     choropleth_data = (
         cluster_country_cover.merge(
-            europe[['geometry', 'iso_a2']], left_on='COUNTRY_CODE', right_on='iso_a2', how='left')
-        .drop(['iso_a2'], axis=1)
+            europe[['geometry', 'iso_a2_eh']], left_on='COUNTRY_CODE', right_on='iso_a2_eh', how='left')
+        .drop(['iso_a2_eh'], axis=1)
     )
     # choropleth_data
-    return choropleth_data, europe
+    return (choropleth_data,)
 
 
 @app.cell
@@ -661,15 +660,13 @@ def _(choropleth_data, europe, px):
 
 
 @app.cell
-def _(choropleth_data, map_countries):
-    choropleth_data[choropleth_data.COUNTRY_CODE =='FR'][choropleth_data.CLUSTER == 'Agricultural']
-    map_countries[map_countries.admin == 'France']
+def _(choropleth_data):
+    choropleth_data[choropleth_data["CLUSTER"] == 'Other']
     return
 
 
 @app.cell
 def _(CLUSTER_COLORS, choropleth_data, europe, go, json, mcolors):
-
     from plotly.subplots import make_subplots
     from config import COLORS, FONT_FAMILY,INLINE_FONTSIZE
 
@@ -731,14 +728,14 @@ def _(CLUSTER_COLORS, choropleth_data, europe, go, json, mcolors):
         colorscale = _cluster_colorscale(base_hex)
         if idx==0:
             print(colorscale)
-        
+
         _fig.add_trace(
             go.Choropleth(
                 locations=df_cluster["COUNTRY_CODE"],
                 # z=df_cluster["COVER_KM"],
                 z=df_cluster["COVER_NORM"],
                 geojson=europe_geojson,
-                featureidkey="properties.iso_a2",
+                featureidkey="properties.iso_a2_eh",
                 colorscale=colorscale,
                 marker_line_width=0.4,
                 marker_line_color=COLORS["white"],

@@ -167,35 +167,13 @@ def load_europe_geodataframe(data_dir=None):
     
     europe_gdf = gpd.read_file(europe_path)
     
-    # The world.geo.json file has iso_a2 column directly - use it
-    if 'iso_a2' not in europe_gdf.columns:
-        # Fallback: try iso_a2_eh or create from adm0_a3
-        if 'iso_a2_eh' in europe_gdf.columns:
-            europe_gdf['iso_a2'] = europe_gdf['iso_a2_eh']
-        elif 'adm0_a3' in europe_gdf.columns:
-            # Mapping from ISO 3166-1 alpha-3 to alpha-2 codes for European countries
-            iso3_to_iso2 = {
-                'AUT': 'AT', 'BEL': 'BE', 'BGR': 'BG', 'HRV': 'HR', 'CYP': 'CY',
-                'CZE': 'CZ', 'DNK': 'DK', 'EST': 'EE', 'FIN': 'FI', 'FRA': 'FR',
-                'DEU': 'DE', 'GRC': 'GR', 'HUN': 'HU', 'IRL': 'IE', 'ITA': 'IT',
-                'LVA': 'LV', 'LTU': 'LT', 'LUX': 'LU', 'MLT': 'MT', 'NLD': 'NL',
-                'POL': 'PL', 'PRT': 'PT', 'ROU': 'RO', 'SVK': 'SK', 'SVN': 'SI',
-                'ESP': 'ES', 'SWE': 'SE', 'GBR': 'GB', 'ALB': 'AL', 'BIH': 'BA',
-                'MKD': 'MK', 'MNE': 'ME', 'SRB': 'RS', 'ISL': 'IS', 'NOR': 'NO',
-                'CHE': 'CH', 'UKR': 'UA', 'MDA': 'MD', 'BLR': 'BY', 'RUS': 'RU',
-                'LIE': 'LI', 'MCO': 'MC', 'SMR': 'SM', 'VAT': 'VA', 'AND': 'AD',
-            }
-            europe_gdf['iso_a2'] = europe_gdf['adm0_a3'].map(iso3_to_iso2)
-        else:
-            raise ValueError(f"Could not find ISO code column in GeoDataFrame. Available columns: {europe_gdf.columns.tolist()}")
-    
     # Filter to only countries that have data (will be done in prepare_choropleth_data)
     # But we can also filter to Europe if continent column exists
     if 'continent' in europe_gdf.columns:
         europe_gdf = europe_gdf[europe_gdf['continent'] == 'Europe']
     
     # Ensure iso_a2 is not null
-    europe_gdf = europe_gdf[europe_gdf['iso_a2'].notna()]
+    europe_gdf = europe_gdf[europe_gdf['iso_a2_eh'].notna()]
     
     return europe_gdf
 

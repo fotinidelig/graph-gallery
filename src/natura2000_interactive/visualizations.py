@@ -630,7 +630,7 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
                 locations=df_cluster["COUNTRY_CODE"],
                 z=df_cluster["COVER_NORM"],
                 geojson=europe_geojson,
-                featureidkey="properties.iso_a2",
+                featureidkey="properties.iso_a2_eh",
                 colorscale=colorscale,
                 marker_line_width=0.4,
                 marker_line_color=COLORS["white"],
