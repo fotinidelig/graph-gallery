@@ -211,17 +211,17 @@ def prepare_choropleth_data(habitats, europe_gdf):
     
     # Filter europe_gdf to only countries present in the data
     # (matching user's code: europe = map_countries[map_countries.iso_a2_eh.isin(countries)])
-    europe = europe_gdf[europe_gdf['iso_a2'].isin(countries)]
+    europe = europe_gdf[europe_gdf['iso_a2_eh'].isin(countries)]
     
     # Merge with Europe geometries
     chloropleth_data = (
         cluster_country_cover.merge(
-            europe[['geometry', 'iso_a2']],
+            europe[['geometry', 'iso_a2_eh']],
             left_on='COUNTRY_CODE',
-            right_on='iso_a2',
+            right_on='iso_a2_eh',
             how='left'
         )
-        .drop(['iso_a2'], axis=1, errors='ignore')
+        .drop(['iso_a2_eh'], axis=1, errors='ignore')
     )
     
     return chloropleth_data
