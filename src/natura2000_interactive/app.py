@@ -394,6 +394,7 @@ app.layout = html.Div([
             html.Div([
                 html.Div([
                     html.Div([
+                        dcc.Store(id='sankey-selected-node', data=None),  # Store selected node index
                         dcc.Graph(
                             id='sankey-plot',
                             figure=create_sankey_diagram(sankey_data),
@@ -463,6 +464,44 @@ app.layout = html.Div([
     ], className="story-section", style={'minHeight': '40vh'}),
     
 ], style={'padding': 0})
+
+
+# ============================================================================
+# Callbacks for Interactive Features
+# ============================================================================
+
+@app.callback(
+    [Output('sankey-plot', 'figure'),
+     Output('sankey-selected-node', 'data')],
+    [Input('sankey-plot', 'clickData')],
+    [dash.dependencies.State('sankey-selected-node', 'data')],
+    prevent_initial_call=True
+)
+def update_sankey_on_click(clickData, current_selected_node):
+    """
+    Handle node clicks on the Sankey diagram.
+    When a node is clicked, filter links to show only those connected to it.
+    Click the same node again to reset (show all links).
+    """
+    if clickData is None:
+        # No click data, return original figure
+        return create_sankey_diagram(sankey_data), None
+    
+    # Extract node index from click data
+    # Plotly Sankey clickData structure: {'points': [{'pointNumber': <node_index>, ...}]}
+    point_number = clickData.get('points', [{}])[0].get('pointNumber')
+    
+    if point_number is None:
+        return create_sankey_diagram(sankey_data), None
+    
+    # Toggle: if clicking the same node, reset to show all links
+    if current_selected_node == point_number:
+        # Reset: show all links
+        return create_sankey_diagram(sankey_data), None
+    else:
+        # Filter: show only links connected to clicked node
+        filtered_fig = create_sankey_diagram(sankey_data, selected_node_index=point_number)
+        return filtered_fig, point_number
 
 
 if __name__ == '__main__':

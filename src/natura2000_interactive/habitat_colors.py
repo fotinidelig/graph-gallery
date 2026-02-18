@@ -83,7 +83,7 @@ CLUSTER_COLORS = {
     'Grassland': '#B8CA8B',            # Light orange/yellow
     'Coastal': '#60d2c8',              # Cyan/Teal
     'Agricultural': '#cc6a3d',         # Red/Orange
-    'Heath/Scrub': '#d7b3e3',          # Purple
+    'Heath/Scrub': '#CD9FDC',          # Purple
     'Rocky/Alpine': '#8e6d67',        # Brown/Gray
     'Urban/Artificial': '#983256',     # Pink
     'Other': '#bbbaba'                 # Gray

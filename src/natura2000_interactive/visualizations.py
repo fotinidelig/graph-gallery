@@ -202,9 +202,9 @@ def create_scatter_plot(scatter_data):
     return fig
 
 
-def create_sankey_diagram(sankey_data):
+def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLORS['background']):
     """
-    Create the Sankey diagram visualization.
+    Create the Sankey diagram visualization with optional node filtering.
     
     Parameters
     ----------
@@ -214,6 +214,9 @@ def create_sankey_diagram(sankey_data):
         - DESCRIPTION: Habitat description
         - COUNTRY_CODE: Country code
         - COVER_KM: Coverage in km²
+    selected_node_index : int, optional
+        If provided, only links connected to this node will be shown.
+        Other nodes will be dimmed. If None, all links are shown.
         
     Returns
     -------
@@ -224,6 +227,51 @@ def create_sankey_diagram(sankey_data):
         """Convert RGB tuple (0-1) to rgba string (0-255)."""
         r, g, b = rgb
         return f'rgba({int(r * 255)}, {int(g * 255)}, {int(b * 255)}, {alpha})'
+    
+    def wrap_text(text, max_chars_per_line=30):
+        """
+        Wrap text by adding newlines at word boundaries.
+        
+        Parameters
+        ----------
+        text : str
+            Text to wrap
+        max_chars_per_line : int
+            Maximum characters per line
+            
+        Returns
+        -------
+        str
+            Wrapped text with newlines
+        """
+        if len(text) <= max_chars_per_line:
+            return text
+        
+        words = text.split()
+        lines = []
+        current_line = []
+        current_length = 0
+        
+        for word in words:
+            # Check if adding this word would exceed the limit
+            if current_length + len(word) + (1 if current_line else 0) > max_chars_per_line:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                    current_length = len(word)
+                else:
+                    # Word itself is longer than max_chars_per_line, split it
+                    lines.append(word[:max_chars_per_line])
+                    current_line = [word[max_chars_per_line:]]
+                    current_length = len(word[max_chars_per_line:])
+            else:
+                current_line.append(word)
+                current_length += len(word) + (1 if len(current_line) > 1 else 0)
+        
+        if current_line:
+            lines.append(' '.join(current_line))
+        
+        return '<br>'.join(lines)
     
     # Get unique nodes
     clusters = sankey_data["CLUSTER"].unique()
@@ -278,6 +326,33 @@ def create_sankey_diagram(sankey_data):
     target = target_desc_cluster + target_cluster_country
     value = value_desc_cluster + value_cluster_country
     
+    # Determine which links and nodes are connected if a node is selected
+    if selected_node_index is not None:
+        # Find all links directly connected to the selected node
+        connected_link_indices = set([
+            i for i, (s, t) in enumerate(zip(source, target))
+            if s == selected_node_index or t == selected_node_index
+        ])
+        
+        # Find all nodes connected to the selected node (directly connected)
+        connected_nodes = {selected_node_index}
+        for link_idx in connected_link_indices:
+            connected_nodes.add(source[link_idx])
+            connected_nodes.add(target[link_idx])
+        
+        # Keep ALL links, but set unconnected ones to 0 (invisible)
+        # This preserves node positions
+        # filtered_value = []
+        # for i, v in enumerate(value):
+        #     if i in connected_link_indices:
+        #         filtered_value.append(v)  # Keep original value
+        #     else:
+        #         filtered_value.append(0)  # Hide link by setting value to 0
+        # value = filtered_value
+    else:
+        connected_nodes = set(range(len(node_labels)))  # All nodes are connected
+        connected_link_indices = set(range(len(source)))  # All links are connected
+    
     # Create node colors and positions
     desc_to_cluster = (
         sankey_data.groupby("DESCRIPTION")["CLUSTER"].first().to_dict()
@@ -298,36 +373,110 @@ def create_sankey_diagram(sankey_data):
             # Second tier: clusters
             cluster_name = clusters[i - len(descriptions)]
             node_colors.append(CLUSTER_COLORS.get(cluster_name, "#bbbaba"))
-            node_x.append(0.5)
+            # node_x.append(0.5)
             cluster_idx = i - len(descriptions)
-            node_y.append((cluster_idx + 0.5) / max(len(clusters), 1))
+            if clusters[cluster_idx] == 'Forest/Woodland':
+                node_x.append(0.42)
+                node_y.append((cluster_idx + 0.4) / max(len(clusters), 1))
+            else:
+                node_x.append(0.5)
+                node_y.append((cluster_idx + 0.5) / max(len(clusters), 1))
         else:
             # Third tier: countries
             node_colors.append(COLORS["details"])
-            node_x.append(0.98)
             country_idx = i - len(descriptions) - len(clusters)
             node_y.append((country_idx + 0.5) / max(len(countries), 1))
+            # add a different x position for country == 'ES' as it has the largest node lentgh
+            if countries[country_idx] == 'ES':
+                node_x.append(0.91)
+            else:
+                node_x.append(0.98)
     
-    # Color links by source cluster
+    # Color links by source cluster and dim if filtered
     link_colors = []
-    for src_idx in source:
+    for i, src_idx in enumerate(source):
+        # Determine base color
         if src_idx < len(descriptions):
             # Link from description -> cluster (color by description's cluster)
             desc_name = node_labels[src_idx]
             desc_cluster = desc_to_cluster.get(desc_name)
             base_color_hex = CLUSTER_COLORS.get(desc_cluster, "#bbbaba")
             rgb = mcolors.to_rgb(base_color_hex)
-            link_colors.append(rgb_to_rgba(rgb, alpha=0.6))
+            # Dim unconnected links
+            if selected_node_index is not None and i not in connected_link_indices:
+                link_colors.append(rgb_to_rgba(rgb, alpha=0.05))  # Very dim
+            else:
+                link_colors.append(rgb_to_rgba(rgb, alpha=0.6))
         else:
             # Link from cluster -> country (color by cluster)
             cluster_name = node_labels[src_idx]
             base_color_hex = CLUSTER_COLORS.get(cluster_name, "#bbbaba")
             rgb = mcolors.to_rgb(base_color_hex)
-            link_colors.append(rgb_to_rgba(rgb, alpha=0.4))
+            # Dim unconnected links
+            if selected_node_index is not None and i not in connected_link_indices:
+                link_colors.append(rgb_to_rgba(rgb, alpha=0.05))  # Very dim
+            else:
+                link_colors.append(rgb_to_rgba(rgb, alpha=0.4))
+    
+    # # Dim nodes that aren't connected to the selected node
+    if selected_node_index is not None:
+        dimmed_node_colors = []
+        for i, color in enumerate(node_colors):
+            if i in connected_nodes:
+                dimmed_node_colors.append(color)
+            else:
+                # Convert to rgba and reduce opacity
+                if isinstance(color, str) and color.startswith('#'):
+                    rgb = mcolors.to_rgb(color)
+                    dimmed_node_colors.append(
+                        f'rgba({int(rgb[0]*255)}, {int(rgb[1]*255)}, {int(rgb[2]*255)}, 0.2)'
+                    )
+                else:
+                    dimmed_node_colors.append(color)
+        node_colors = dimmed_node_colors
 
     # Hide description labels (too many); show clusters + countries
     node_text_labels = [""] * len(descriptions) + list(clusters) + list(countries)
-    
+
+    # If a node is selected, show tier-1 (descriptions) as *annotations* instead
+    # of Sankey node labels, because Plotly Sankey has a single global font size
+    # for all node labels. Annotations let us use a smaller font just for tier-1.
+    description_label_annotations = []
+    if selected_node_index is not None and selected_node_index < len(descriptions) + len(clusters):
+        for i in sorted(connected_nodes):
+            if i >= len(descriptions):
+                continue
+
+            # label_wrapped = wrap_text(node_labels[i], max_chars_per_line=28)
+            node_text_labels[i] = node_labels[i].split('(')[0]
+            # label_wrapped = node_labels[i].split('(')[0]
+
+            # # Sankey uses y=0 at the top; paper coordinates use y=0 at the bottom.
+            # # We flip y so the annotation sits on the same horizontal band.
+            # y_paper = 1 - node_y[i]
+
+            # description_label_annotations.append(
+            #     dict(
+            #         xref="paper",
+            #         yref="paper",
+            #         x=node_x[i] + 0.01,
+            #         y=y_paper,
+            #         text=label_wrapped,
+            #         showarrow=False,
+            #         xanchor="left",
+            #         yanchor="middle",
+            #         align="left",
+            #         bgcolor="rgba(252, 255, 247, 0.3)",  # subtle white background (COLORS['white'] at 30% opacity)
+            #         bordercolor="rgba(252, 255, 247, 0.0)",
+            #         borderpad=1,
+            #         font=dict(
+            #             family=FONT_FAMILY,
+            #             size=max(9, INLINE_FONTSIZE - 3),
+            #             color=COLORS["text_primary"],
+            #         ),
+            #     )
+            # )
+            
     fig = go.Figure(
         data=[
             go.Sankey(
@@ -367,6 +516,7 @@ def create_sankey_diagram(sankey_data):
         height=800,
         margin=dict(l=0, r=0, t=10, b=30),
         font_family=FONT_FAMILY,
+        annotations=description_label_annotations,
     )
     
     return fig
