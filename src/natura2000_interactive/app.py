@@ -14,9 +14,16 @@ from data_loader import (
     prepare_scatter_data, 
     prepare_sankey_data, 
     prepare_choropleth_data,
-    load_europe_geodataframe
+    load_europe_geodataframe,
+    load_species_data,
+    prepare_species_count_data
 )
-from visualizations import create_scatter_plot, create_sankey_diagram, create_cluster_choropleth_grid
+from visualizations import (
+    create_scatter_plot, 
+    create_sankey_diagram, 
+    create_cluster_choropleth_grid,
+    create_species_pictogram
+)
 from config import APP_PORT, APP_DEBUG, FONT_FAMILY, COLORS
 
 
@@ -47,6 +54,16 @@ except Exception as e:
     print("Choropleth visualization will be skipped.")
     europe_gdf = None
     choropleth_data = None
+
+# Load species data
+print("Loading species data...")
+try:
+    species_data = load_species_data()
+    species_count_data = prepare_species_count_data(species_data)
+except Exception as e:
+    print(f"Warning: Could not load species data: {e}")
+    print("Species visualization will be skipped.")
+    species_count_data = None
 
 
 # ============================================================================
@@ -448,6 +465,47 @@ app.layout = html.Div([
         ], className="story-container")
     ], className="story-section")
 ] if choropleth_data is not None and europe_gdf is not None else []) + [
+    
+    # Middle Text Section - Transition to Species View
+    html.Div([
+        html.Div([
+            html.Div([
+                html.H2("Protected Species", className="text-center",),
+                html.P([
+                    "Beyond habitats, the Natura 2000 network protects thousands of species across Europe. ",
+                    "The following visualization shows the diversity of protected species by type, ",
+                    "with each marker representing 100 species."
+                ], className="text-center",)
+            ], className="story-text")
+        ], className="story-container")
+    ], className="story-section"),
+    
+    # Species Pictogram Section (only if data is available)
+] + ([
+    html.Div([
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.Div([
+                        html.H3("Species Diversity", className="text-center",),
+                        html.P([
+                            "Each circle represents 100 species, arranged in a grid. ",
+                            "Colors distinguish different species groups, from plants and invertebrates ",
+                            "to birds, mammals, and more. Explore the legend to see the count for each group."
+                        ], className="text-center",)
+                    ], className="annotation"),
+                    html.Div([
+                        dcc.Graph(
+                            id='species-pictogram',
+                            figure=create_species_pictogram(species_count_data),
+                            config={'displayModeBar': False}
+                        ),
+                    ], className="plot-wrapper", style={'position': 'relative'})
+                ], className="plot-container")
+            ], className="story-container")
+        ], className="story-container")
+    ], className="story-section")
+] if species_count_data is not None else []) + [
     
     # Closing Text
     html.Div([

@@ -14,6 +14,7 @@ from plotly.subplots import make_subplots
 
 from config import SCATTER_SPIRAL_CONFIG, FONT_FAMILY, COLORS, INLINE_FONTSIZE
 from habitat_colors import CLUSTER_COLORS, rgb_to_rgba
+from species_colors import SPECIES_COLORS, get_species_color
 
 
 def generate_squashed_spiral(N, **kwargs):
@@ -671,4 +672,120 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
         margin=dict(l=0, r=0, t=0, b=0),
     )
 
+    return fig
+
+
+def create_species_pictogram(species_count_data):
+    """
+    Create a pictogram-style visualization showing species counts by type.
+    Each marker represents 100 species, arranged in a spiral pattern (polar coordinates).
+    
+    Parameters
+    ----------
+    species_count_data : pandas.DataFrame
+        DataFrame with columns: SPGROUP, COUNT
+        Should be sorted by count in descending order
+        
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        Pictogram figure
+    """
+    # Prepare data
+    species_count_data = species_count_data.copy()
+    species_count_data['COUNT_HUNDREDS'] = species_count_data['COUNT'] / 100
+    
+    # Spiral parameters
+    initial_radius = 0.5  # Starting radius at the center
+    angular_spacing = 0.1  # Angular increment in radians (controls spacing along spiral)
+    radius_growth_rate = 0.09  # How much radius increases per angular step
+    
+    # Track position along spiral (continuous angle, increasing radius)
+    current_angle = 0.0  # Start at angle 0
+    current_radius = initial_radius
+    
+    series = []
+    
+    for _i, row in species_count_data.iterrows():
+        _x = []
+        _y = []
+        count = int(row.COUNT_HUNDREDS)
+        stype = row.SPGROUP
+        
+        for j in range(0, count):
+            # Calculate position along spiral
+            # Radius increases gradually as we go around
+            current_radius = initial_radius + radius_growth_rate * current_angle
+            
+            # Convert polar to Cartesian coordinates
+            x = current_radius * np.cos(current_angle)
+            y = current_radius * np.sin(current_angle)
+            
+            _x.append(x)
+            _y.append(y)
+            
+            # Move to next position along spiral
+            current_angle += angular_spacing
+        
+        series.append(
+            go.Scatter(
+                x=_x, 
+                y=_y, 
+                mode='markers', 
+                marker={
+                    'symbol': 'circle', 
+                    'line': dict(width=0), 
+                    'size': 10, 
+                    'color': get_species_color(stype)
+                }, 
+                name=f'{stype} ({row.COUNT_HUNDREDS})',
+                hovertemplate=f'{stype} ({row.COUNT_HUNDREDS})<extra></extra>'
+            ),
+        )
+    
+    fig = go.Figure(
+        dict(
+            data=series, 
+            layout=go.Layout(
+                # title={'text': "Species", 'x': 0.5, 'xanchor': 'center'},
+                paper_bgcolor=COLORS['background'],
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    showgrid=False,
+                    zeroline=False, 
+                    showline=False, 
+                    visible=False, 
+                    showticklabels=False,
+                    scaleanchor='y',
+                    scaleratio=1  # Keep aspect ratio 1:1 for circular appearance
+                ),
+                yaxis=dict(
+                    showgrid=False,
+                    zeroline=False, 
+                    showline=False, 
+                    visible=False, 
+                    showticklabels=False
+                ),
+                legend=dict(
+                    title_text="Species count (in hundreds)",
+                    title_font=dict(
+                        family=FONT_FAMILY,
+                        size=INLINE_FONTSIZE,
+                        color=COLORS['text_primary']
+                    ),
+                    font=dict(
+                        family=FONT_FAMILY,
+                        size=INLINE_FONTSIZE - 1,
+                        color=COLORS['text_primary']
+                    )
+                ),
+                font=dict(
+                    family=FONT_FAMILY,
+                    size=INLINE_FONTSIZE,
+                    color=COLORS['text_primary']
+                ),
+            )
+        )
+    )
+    
     return fig

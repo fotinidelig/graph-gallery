@@ -225,3 +225,70 @@ def prepare_choropleth_data(habitats, europe_gdf):
     )
     
     return chloropleth_data
+
+
+def load_species_data(data_dir=None):
+    """
+    Load and merge species datasets (SPECIES.csv and OTHERSPECIES.csv).
+    
+    Parameters
+    ----------
+    data_dir : str or Path, optional
+        Path to data directory. If None, uses BASE_DATA_DIR from config.
+        
+    Returns
+    -------
+    pandas.DataFrame
+        Merged DataFrame with all species data
+    """
+    if data_dir is None:
+        base_path = BASE_DATA_DIR
+    else:
+        base_path = Path(data_dir)
+    
+    # Load species datasets
+    species = pd.read_csv(base_path / 'SPECIES.csv')
+    other_species = pd.read_csv(base_path / 'OTHERSPECIES.csv')
+    
+    # Rename column for consistency
+    other_species = other_species.rename(columns={'SPECIESGROUP': 'SPGROUP'})
+    
+    # Find common columns
+    common_cols = other_species.columns.intersection(species.columns)
+    
+    # Merge the datasets
+    all_species = pd.concat(
+        [other_species[common_cols], species[common_cols]], 
+        ignore_index=True
+    )
+    
+    # Clean up SPGROUP column
+    all_species['SPGROUP'] = all_species['SPGROUP'].astype(str)
+    all_species = all_species[all_species['SPGROUP'] != 'nan']
+    
+    return all_species
+
+
+def prepare_species_count_data(species_data):
+    """
+    Prepare species count data grouped by species type.
+    
+    Parameters
+    ----------
+    species_data : pandas.DataFrame
+        DataFrame with species data containing SPGROUP and SPECIESNAME columns
+        
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns: SPGROUP, COUNT
+        Sorted by count in descending order
+    """
+    species_count = (
+        species_data.groupby('SPGROUP')
+        .SPECIESNAME.nunique()
+        .reset_index(name='COUNT')
+    )
+    species_count = species_count.sort_values(by='COUNT', ascending=False)
+    
+    return species_count
