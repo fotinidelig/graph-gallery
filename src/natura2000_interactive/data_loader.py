@@ -292,3 +292,93 @@ def prepare_species_count_data(species_data):
     species_count = species_count.sort_values(by='COUNT', ascending=False)
     
     return species_count
+
+
+def prepare_species_scatter_map_data(species_data, data_dir=None):
+    """
+    Prepare species count data per site for scatter map visualization.
+    
+    This function merges species data with site location data (latitude, longitude)
+    and groups by species type and site to count unique species per site.
+    
+    Parameters
+    ----------
+    species_data : pandas.DataFrame
+        DataFrame with species data containing SPGROUP, SITECODE, and SPECIESNAME columns
+    data_dir : str or Path, optional
+        Path to data directory. If None, uses BASE_DATA_DIR from config.
+        
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns: SPGROUP, SITECODE, LATITUDE, LONGITUDE, COUNT, COUNTRY_CODE
+        Contains species counts per site per species group
+    """
+    if data_dir is None:
+        base_path = BASE_DATA_DIR
+    else:
+        base_path = Path(data_dir)
+    
+    # Load sites data
+    sites = pd.read_csv(base_path / 'NATURA2000SITES.csv')
+    
+    # Merge species data with site location data
+    species_count_sites = (
+        species_data.merge(
+            sites[['LATITUDE', 'LONGITUDE', 'SITECODE']], 
+            on='SITECODE', 
+            how='left'
+        )
+        .groupby(['SPGROUP', 'SITECODE', 'LATITUDE', 'LONGITUDE', 'COUNTRY_CODE'])['SPECIESNAME']
+        .nunique().reset_index(name='COUNT')
+    )
+    
+    # Remove rows with missing coordinates
+    species_count_sites = species_count_sites.dropna(subset=['LATITUDE', 'LONGITUDE'])
+    
+    return species_count_sites
+
+
+def prepare_species_per_country_data(species_data, data_dir=None):
+    """
+    Prepare species count data grouped by country and species type.
+    
+    Parameters
+    ----------
+    species_data : pandas.DataFrame
+        DataFrame with species data containing SPGROUP, SITECODE, and SPECIESNAME columns
+    data_dir : str or Path, optional
+        Path to data directory. If None, uses BASE_DATA_DIR from config.
+        
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns: COUNTRY_CODE, SPGROUP, COUNT
+        Contains species counts per country per species group
+    """
+    if data_dir is None:
+        base_path = BASE_DATA_DIR
+    else:
+        base_path = Path(data_dir)
+    
+    # Load sites data to get COUNTRY_CODE
+    sites = pd.read_csv(base_path / 'NATURA2000SITES.csv')
+    
+    # Merge species data with sites to get COUNTRY_CODE
+    species_with_country = species_data.merge(
+        sites[['SITECODE']],
+        on='SITECODE',
+        how='left'
+    )
+    
+    # Group by country and species type
+    species_per_country = (
+        species_with_country.groupby(['COUNTRY_CODE', 'SPGROUP'])['SPECIESNAME']
+        .nunique()
+        .reset_index(name='COUNT')
+    )
+    
+    # Remove rows with missing country codes
+    species_per_country = species_per_country.dropna(subset=['COUNTRY_CODE'])
+    
+    return species_per_country

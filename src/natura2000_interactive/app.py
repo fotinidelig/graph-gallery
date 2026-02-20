@@ -8,6 +8,7 @@ and text annotations for storytelling.
 import dash
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
 
 from data_loader import (
     load_natura2000_data, 
@@ -16,13 +17,17 @@ from data_loader import (
     prepare_choropleth_data,
     load_europe_geodataframe,
     load_species_data,
-    prepare_species_count_data
+    prepare_species_count_data,
+    prepare_species_scatter_map_data,
+    prepare_species_per_country_data
 )
 from visualizations import (
     create_scatter_plot, 
     create_sankey_diagram, 
     create_cluster_choropleth_grid,
-    create_species_pictogram
+    create_species_pictogram,
+    create_species_per_country_scatter,
+    create_species_scatter_map
 )
 from config import APP_PORT, APP_DEBUG, FONT_FAMILY, COLORS
 
@@ -60,10 +65,14 @@ print("Loading species data...")
 try:
     species_data = load_species_data()
     species_count_data = prepare_species_count_data(species_data)
+    species_count_sites = prepare_species_scatter_map_data(species_data)
+    species_per_country = prepare_species_per_country_data(species_data)
 except Exception as e:
     print(f"Warning: Could not load species data: {e}")
     print("Species visualization will be skipped.")
     species_count_data = None
+    species_count_sites = None
+    species_per_country = None
 
 
 # ============================================================================
@@ -507,6 +516,89 @@ app.layout = html.Div([
     ], className="story-section")
 ] if species_count_data is not None else []) + [
     
+    # Middle Text Section - Transition to Species by Country
+    html.Div([
+        html.Div([
+            html.Div([
+                html.H2("Species Distribution by Country", className="text-center",),
+                html.P([
+                    "The following visualization shows how different species types are distributed across European countries. ",
+                    "Each row represents a species type, and each marker shows the number of species found in that country. ",
+                    "Marker size and color intensity both encode the species count."
+                ], className="text-center",)
+            ], className="story-text")
+        ], className="story-container")
+    ], className="story-section") if species_per_country is not None and species_count_data is not None else [],
+    
+    # Species per Country Scatter Plot Section (only if data is available)
+] + ([
+    html.Div([
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.Div([
+                        dcc.Graph(
+                            id='species-per-country-scatter',
+                            figure=create_species_per_country_scatter(species_per_country, species_count_data),
+                            config={'displayModeBar': False}
+                        ),
+                    ], className="plot-wrapper", style={'position': 'relative'})
+                ], className="plot-container", style={'flexDirection': 'column'})
+            ], className="story-container")
+        ], className="story-container")
+    ], className="story-section")
+] if species_per_country is not None and species_count_data is not None else []) + [
+    
+    # Middle Text Section - Transition to Species Distribution Map
+    html.Div([
+        html.Div([
+            html.Div([
+                html.H2("Species Distribution Across Sites", className="text-center",),
+                html.P([
+                    "Explore the geographic distribution of different species types across Natura 2000 sites. ",
+                    "Select a species type from the dropdown to see where these species are found. ",
+                    "Marker size and color intensity both represent the number of species at each site."
+                ], className="text-center",)
+            ], className="story-text")
+        ], className="story-container")
+    ], className="story-section") if species_count_sites is not None and europe_gdf is not None else [],
+    
+    # Species Scatter Map Section (only if data is available)
+] + ([
+    html.Div([
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.Div([
+                        html.Label("Select Species Type:", style={'fontSize': '1rem', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
+                        dcc.Dropdown(
+                            id='species-type-dropdown',
+                            clearable=False,
+                            searchable=False,
+                            options=[
+                                {'label': stype, 'value': stype} 
+                                for stype in sorted(species_count_sites['SPGROUP'].unique())
+                            ],
+                            value=sorted(species_count_sites['SPGROUP'].unique())[0] if len(species_count_sites['SPGROUP'].unique()) > 0 else None,
+                            style={
+                                'backgroundColor': COLORS['white'],
+                                'color': COLORS['text_primary'],
+                                'fontFamily': FONT_FAMILY
+                            }
+                        ),
+                    ], style={'marginBottom': '2rem', 'maxWidth': '300px', 'margin': '0 auto 2rem auto'}),
+                    html.Div([
+                        dcc.Graph(
+                            id='species-scatter-map',
+                            config={'displayModeBar': False}
+                        ),
+                    ], className="plot-wrapper", style={'position': 'relative'})
+                ], className="plot-container", style={'flexDirection': 'column'})
+            ], className="story-container")
+        ], className="story-container")
+    ], className="story-section")
+] if species_count_sites is not None and europe_gdf is not None else []) + [
+    
     # Closing Text
     html.Div([
         html.Div([
@@ -560,6 +652,38 @@ def update_sankey_on_click(clickData, current_selected_node):
         # Filter: show only links connected to clicked node
         filtered_fig = create_sankey_diagram(sankey_data, selected_node_index=point_number)
         return filtered_fig, point_number
+
+
+@app.callback(
+    Output('species-scatter-map', 'figure'),
+    [Input('species-type-dropdown', 'value')],
+    prevent_initial_call=False
+)
+def update_species_scatter_map(selected_species_type):
+    """
+    Update the species scatter map based on the selected species type.
+    """
+    if species_count_sites is None or europe_gdf is None or selected_species_type is None:
+        # Return empty figure
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5,
+            showarrow=False,
+            font=dict(size=16, color=COLORS['text_primary'])
+        )
+        fig.update_layout(
+            height=600,
+            width=900,
+            plot_bgcolor=COLORS['background'],
+            paper_bgcolor=COLORS['background'],
+        )
+        return fig
+    
+    # Create the scatter map for the selected species type
+    fig = create_species_scatter_map(species_count_sites, selected_species_type, europe_gdf)
+    return fig
 
 
 if __name__ == '__main__':

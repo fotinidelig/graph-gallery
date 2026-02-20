@@ -12,10 +12,27 @@ import plotly.express as px
 import matplotlib.colors as mcolors
 from plotly.subplots import make_subplots
 
-from config import SCATTER_SPIRAL_CONFIG, FONT_FAMILY, COLORS, INLINE_FONTSIZE
+from config import SCATTER_SPIRAL_CONFIG, FONT_FAMILY, COLORS, INLINE_FONTSIZE, COUNTRY_CODES_NAMES
 from habitat_colors import CLUSTER_COLORS, rgb_to_rgba
 from species_colors import SPECIES_COLORS, get_species_color
 
+
+def create_colorscale(hex_color, alpha=0.5):
+    """Build a light→full colorscale from a hex color."""
+    r, g, b = mcolors.to_rgb(hex_color)
+    # Light version, slightly tinted toward background
+    bg_r, bg_g, bg_b = mcolors.to_rgb(COLORS["background"])
+    light = (
+        0.8 * bg_r + 0.2 * r,
+        0.8 * bg_g + 0.2 * g,
+        0.8 * bg_b + 0.2 * b,
+    )
+    light_rgba = f"rgba({int(light[0]*255)}, {int(light[1]*255)}, {int(light[2]*255)}, {alpha})"
+    full_rgba = f"rgba({int(r*255)}, {int(g*255)}, {int(b*255)}, 1.0)"
+    return [
+        [0.0, light_rgba],
+        [1.0, full_rgba],
+    ]
 
 def generate_squashed_spiral(N, **kwargs):
     """
@@ -593,23 +610,6 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
         ann.bordercolor = "rgba(252, 255, 247, 0.0)"  # No border
         ann.borderpad = 3  # Padding around text
 
-    def _cluster_colorscale(hex_color):
-        """Build a light→full colorscale from a cluster hex color."""
-        r, g, b = mcolors.to_rgb(hex_color)
-        # Light version, slightly tinted toward background
-        bg_r, bg_g, bg_b = mcolors.to_rgb(COLORS["background"])
-        light = (
-            0.8 * bg_r + 0.2 * r,
-            0.8 * bg_g + 0.2 * g,
-            0.8 * bg_b + 0.2 * b,
-        )
-        light_rgba = f"rgba({int(light[0]*255)}, {int(light[1]*255)}, {int(light[2]*255)}, 0.5)"
-        full_rgba = f"rgba({int(r*255)}, {int(g*255)}, {int(b*255)}, 1.0)"
-        return [
-            [0.0, light_rgba],
-            [1.0, full_rgba],
-        ]
-
     for idx, cluster in enumerate(clusters):
         r = idx // cols + 1
         c = idx % cols + 1
@@ -624,7 +624,7 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
         )
 
         base_hex = CLUSTER_COLORS.get(cluster, "#bbbaba")
-        colorscale = _cluster_colorscale(base_hex)
+        colorscale = create_colorscale(base_hex)
 
         fig.add_trace(
             go.Choropleth(
@@ -653,8 +653,8 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
         showcountries=False,
         showcoastlines=False,
         showland=True,
-        projection_scale=2.90,
-        center=dict(lat=55, lon=15),
+        projection_scale=2.30,
+        center=dict(lat=50, lon=10),
         landcolor=COLORS["white"],
         bgcolor=COLORS["white"],
     )
@@ -785,6 +785,250 @@ def create_species_pictogram(species_count_data):
                     color=COLORS['text_primary']
                 ),
             )
+        )
+    )
+    
+    return fig
+
+
+def create_species_per_country_scatter(species_per_country, species_count_data):
+    """
+    Create a scatter plot showing species distribution across countries.
+    
+    Each species type is shown on a separate row (y-axis), with countries on the x-axis.
+    Marker size and color encode the species count per country.
+    
+    Parameters
+    ----------
+    species_per_country : pandas.DataFrame
+        DataFrame with columns: COUNTRY_CODE, SPGROUP, COUNT
+    species_count_data : pandas.DataFrame
+        DataFrame with columns: SPGROUP, COUNT (used to get species types order)
+        
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        Scatter plot figure
+    """
+    fig = go.Figure()
+    
+    # Get species types in the order they appear in species_count_data
+    species_types = species_count_data.SPGROUP.unique()
+    species_per_country['COUNTRY'] = species_per_country.apply(lambda x: COUNTRY_CODES_NAMES[x.COUNTRY_CODE], axis=1)
+    # Create y-position mapping for each species type
+    y_positions = {species: i for i, species in enumerate(species_types)}
+    
+    # # Get global min/max for consistent color scaling
+    # global_min = species_per_country['COUNT'].min()
+    # global_max = species_per_country['COUNT'].max()
+    
+    # Add a trace for each species type
+    for species_type in species_types:
+        data = species_per_country[species_per_country.SPGROUP == species_type]
+        data = data.sort_values(by='COUNT', ascending=False)
+
+        if len(data) == 0:
+            continue
+
+        local_min = data.COUNT.min()
+        local_max = data.COUNT.max()
+        
+        y_pos = [y_positions[species_type]] * len(data)
+        
+        # Get base color for this species type
+        base_color = get_species_color(species_type)
+        colorscale = create_colorscale(base_color, alpha=1.0)
+        
+        # Calculate size reference (max size = 50 pixels)
+        sizeref = data.COUNT.max() / 50 if data.COUNT.max() > 0 else 1
+        
+        fig.add_trace(go.Scatter(
+            x=data.COUNTRY_CODE,
+            y=y_pos,
+            mode='markers',
+            name=species_type,
+            marker=dict(
+                size=data.COUNT,
+                sizemode='diameter',
+                sizeref=sizeref,
+                color=data.COUNT,
+                # color=base_color,
+                colorscale=colorscale,
+                opacity=1,
+                showscale=False,
+                cmin=local_min,
+                cmax=local_max,
+                line=dict(width=1.3, color=COLORS['white'])
+            ),
+            text=data.COUNTRY,
+            hovertemplate=(
+                f'<b>{species_type}</b><br>' +
+                'Country: %{text}<br>' +
+                'Count: %{marker.size}<extra></extra>'
+            )
+        ))
+    
+    # Update layout
+    fig.update_layout(
+        yaxis=dict(
+            tickmode='array',
+            tickvals=list(range(len(species_types))),
+            ticktext=species_types,
+            title="Species Type",
+            zeroline=False,
+            gridwidth=0.8,
+            gridcolor='rgba(252, 255, 247, 0.3)',
+        ),
+        xaxis=dict(
+            title="Country Code",
+            zeroline=False,
+            gridcolor='rgba(252, 255, 247, 0.3)',
+            gridwidth=0.8,        ),
+        plot_bgcolor=COLORS['background'],
+        paper_bgcolor=COLORS['background'],
+        height=600,
+        width=900,
+        showlegend=True,
+        font=dict(family=FONT_FAMILY, size=INLINE_FONTSIZE, color=COLORS['text_primary']),
+        legend=dict(
+            font=dict(family=FONT_FAMILY, size=INLINE_FONTSIZE - 2, color=COLORS['text_primary']),
+            bgcolor=COLORS['background'],
+            bordercolor=COLORS['details'],
+            borderwidth=0
+        ),
+        margin=dict(l=60, r=20, t=20, b=60)
+    )
+    
+    return fig
+
+
+def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
+    """
+    Create a scatter map plot showing species distribution across Natura 2000 sites
+    for a specific species type, with Europe map background.
+    
+    Parameters
+    ----------
+    species_count_sites : pandas.DataFrame
+        DataFrame with columns: SPGROUP, SITECODE, LATITUDE, LONGITUDE, COUNT
+        Contains species counts per site per species group
+    species_type : str
+        The species group to visualize (e.g., 'Birds', 'Plants', 'Mammals', etc.)
+    europe_gdf : geopandas.GeoDataFrame
+        GeoDataFrame with Europe country geometries (same as used in choropleth)
+        
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        Scatter map figure with markers colored by species count intensity
+    """
+    # Filter data for the specified species type
+    species_data = species_count_sites[
+        species_count_sites['SPGROUP'] == species_type
+    ].copy()
+    
+    if species_data.empty:
+        # Return empty figure with message
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"No data available for species type: {species_type}",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5,
+            showarrow=False,
+            font=dict(size=16, color=COLORS['text_primary'])
+        )
+        fig.update_layout(
+            height=600,
+            width=900,
+            plot_bgcolor=COLORS['background'],
+            paper_bgcolor=COLORS['background'],
+        )
+        return fig
+    
+    # Get base color for this species type
+    base_color = get_species_color(species_type)
+    
+    colorscale = create_colorscale(base_color)
+    
+    # Create hover text
+    species_data['COUNTRY'] = species_data.COUNTRY_CODE.map(COUNTRY_CODES_NAMES)
+
+    species_data['hover_text'] = species_data.apply(
+        lambda row: f"No. {species_type.lower()}: {row.COUNT}<br>Country: {row.COUNTRY}", axis=1)
+    
+    light_background, _ = create_colorscale(COLORS['background']) # get the color for the map background
+    map_color = light_background[1]
+
+    # Use plotly express scatter_geo with both size and color encoding
+    fig = px.scatter_geo(
+        species_data,
+        lat='LATITUDE',
+        lon='LONGITUDE',
+        color='COUNT',
+        size='COUNT',
+        hover_name='SITECODE',
+        custom_data=['hover_text'],
+        color_continuous_scale=colorscale,
+        size_max=16,  # Maximum marker size
+        opacity=0.7,
+        labels={'COUNT': 'Species Count'},
+    )
+    
+    # Update marker styling and add custom hover template
+    fig.update_traces(
+        marker=dict(
+            line=dict(width=0.1, color=COLORS['white'])
+        ),
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>" +
+            "%{customdata[0]}" +
+            "<extra></extra>"
+        )
+    )
+    
+    # Update layout with same geo settings as choropleth, but with visible borders
+    fig.update_geos(
+        scope="europe",
+        visible=False,
+        showcountries=True,
+        showcoastlines=True,
+        showland=True,
+        projection_scale=2,
+        center=dict[str, int](lat=50, lon=15),
+        landcolor=map_color,
+        bgcolor=COLORS["white"],
+        countrycolor=COLORS['white'],
+        coastlinecolor=map_color,
+        # lataxis_range=[35, 72],
+        # lonaxis_range=[-12, 42],
+    )
+    
+    # Update layout styling
+    fig.update_layout(
+        title=dict(
+            # text=f"{species_type} Distribution Across Natura 2000 Sites",
+            x=0.5,
+            xanchor='center',
+            font=dict(family=FONT_FAMILY, size=INLINE_FONTSIZE + 2, color=COLORS['text_primary'])
+        ),
+        height=550,
+        width=800,
+        plot_bgcolor=COLORS['background'],
+        paper_bgcolor=COLORS['background'],
+        font=dict(
+            family=FONT_FAMILY,
+            size=INLINE_FONTSIZE,
+            color=COLORS['text_primary']
+        ),
+        margin=dict(l=0, r=0, t=50, b=0),
+        coloraxis_colorbar=dict(
+            title=dict(
+                text="Species Count",
+                font=dict(family=FONT_FAMILY, size=INLINE_FONTSIZE, color=COLORS['text_primary'])
+            ),
+            bgcolor=COLORS['background'],
+            bordercolor=COLORS['details'],
+            borderwidth=0
         )
     )
     
