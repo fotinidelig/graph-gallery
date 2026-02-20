@@ -310,6 +310,32 @@ app.index_string = '''
                     display: none;
                 }
             }
+            
+            /* Modern Dropdown Styling - Simple and targeted */
+            .dash-dropdown-wrapper {
+                border: none !important;
+            }
+            
+            .dash-dropdown {
+                border: none !important;
+                border-radius: 8px !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+                background-color: ''' + COLORS['white'] + ''' !important;
+            }
+            
+            .dash-dropdown:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+            }
+            
+            .dash-dropdown:focus,
+            .dash-dropdown:focus-within {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+                outline: none !important;
+            }
+            
+            .dash-dropdown-grid-container {
+                border: none !important;
+            }
         </style>
     </head>
     <body>
@@ -571,22 +597,30 @@ app.layout = html.Div([
                 html.Div([
                     html.Div([
                         html.Label("Select Species Type:", style={'fontSize': '1rem', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
-                        dcc.Dropdown(
-                            id='species-type-dropdown',
-                            clearable=False,
-                            searchable=False,
-                            options=[
-                                {'label': stype, 'value': stype} 
-                                for stype in sorted(species_count_sites['SPGROUP'].unique())
-                            ],
-                            value=sorted(species_count_sites['SPGROUP'].unique())[0] if len(species_count_sites['SPGROUP'].unique()) > 0 else None,
-                            style={
-                                'backgroundColor': COLORS['white'],
-                                'color': COLORS['text_primary'],
-                                'fontFamily': FONT_FAMILY
-                            }
-                        ),
-                    ], style={'marginBottom': '2rem', 'maxWidth': '300px', 'margin': '0 auto 2rem auto'}),
+                        html.Div([
+                            dcc.Dropdown(
+                                id='species-type-dropdown',
+                                clearable=False,
+                                searchable=False,
+                                options=[
+                                    {'label': stype, 'value': stype} 
+                                    for stype in sorted(species_count_sites['SPGROUP'].unique())
+                                ],
+                                value=sorted(species_count_sites['SPGROUP'].unique())[0] if len(species_count_sites['SPGROUP'].unique()) > 0 else None,
+                                style={
+                                    'backgroundColor': COLORS['white'],
+                                    'color': COLORS['text_primary'],
+                                    'fontFamily': FONT_FAMILY
+                                }
+                            ),
+                        ], className='modern-dropdown-wrapper'),
+                    ], style={
+                        'maxWidth': '200px',
+                        'marginTop': 'auto',      # Vertical positioning (top margin) - use px/rem values like '20px', '1rem'
+                        'marginBottom': '1rem', # Vertical positioning (bottom margin)
+                        'marginLeft': 'auto',   # Horizontal positioning (left margin - 'auto' centers, or use px/% values like '20px', '10%')
+                        'marginRight': 'auto'  # Horizontal positioning (right margin - 'auto' centers, or use px/% values)
+                    }),
                     html.Div([
                         dcc.Graph(
                             id='species-scatter-map',
