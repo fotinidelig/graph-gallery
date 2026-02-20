@@ -80,7 +80,7 @@ HABITAT_CLUSTERS = {
 CLUSTER_COLORS = {
     'Water/Marine': '#3481b8',        # Blue
     'Forest/Woodland': '#4b934b',      # Green
-    'Grassland': '#B8CA8B',            # Light orange/yellow
+    'Grassland': '#5F7056',            # Light orange/yellow/green #B8CA8B F3FFE0
     'Coastal': '#60d2c8',              # Cyan/Teal
     'Agricultural': '#cc6a3d',         # Red/Orange
     'Heath/Scrub': '#CD9FDC',          # Purple
