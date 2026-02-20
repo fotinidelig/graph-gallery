@@ -34,6 +34,41 @@ def create_colorscale(hex_color, alpha=0.5):
         [1.0, full_rgba],
     ]
 
+
+def get_text_color_for_background(bg_color):
+    """
+    Determine whether text should be white or dark based on background color brightness.
+    
+    Parameters
+    ----------
+    bg_color : str
+        Background color in hex format (e.g., '#RRGGBB') or rgba format
+        
+    Returns
+    -------
+    str
+        COLORS['white'] for dark backgrounds, COLORS['text_primary'] for light backgrounds
+    """
+    # Handle rgba format
+    if bg_color.startswith('rgba'):
+        # Extract RGB values from rgba string
+        import re
+        match = re.search(r'rgba\((\d+),\s*(\d+),\s*(\d+)', bg_color)
+        if match:
+            r, g, b = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        else:
+            return COLORS['text_primary']
+    else:
+        # Handle hex format
+        r, g, b = mcolors.to_rgb(bg_color)
+        r, g, b = int(r * 255), int(g * 255), int(b * 255)
+    
+    # Calculate relative luminance (simplified)
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    
+    # Use white text for dark backgrounds (luminance < 0.5), dark text for light backgrounds
+    return COLORS['white'] if luminance < 0.5 else COLORS['text_primary']
+
 def generate_squashed_spiral(N, **kwargs):
     """
     Generate N points on a squashed Archimedean spiral.
@@ -127,15 +162,48 @@ def create_scatter_plot(scatter_data):
         size_max=50,
     )
     
-    fig.update_traces(
-        marker=dict(
-            line=dict(
-                width=1.2,
-                color=COLORS['white']
-            ),
-            opacity=0.9,
-        )
-    )
+    # Update traces with marker styling and per-trace hoverlabel
+    for trace in fig.data:
+        cluster_name = trace.name
+        if cluster_name in CLUSTER_COLORS:
+            cluster_color = CLUSTER_COLORS[cluster_name]
+            text_color = get_text_color_for_background(cluster_color)
+            trace.update(
+                marker=dict(
+                    line=dict(
+                        width=1.2,
+                        color=COLORS['white']
+                    ),
+                    opacity=0.9,
+                ),
+                hoverlabel=dict(
+                    bgcolor=cluster_color,
+                    bordercolor='rgba(0,0,0,0)',
+                    font_size=INLINE_FONTSIZE,
+                    font_family=FONT_FAMILY,
+                    font_color=text_color,
+                    align='left'
+                )
+            )
+        else:
+            trace.update(
+                marker=dict(
+                    line=dict(
+                        width=1.2,
+                        color=COLORS['white']
+                    ),
+                    opacity=0.9,
+                ),
+                hoverlabel=dict(
+                    bgcolor=COLORS['background'],
+                    bordercolor='rgba(0,0,0,0)',
+                    font_size=INLINE_FONTSIZE,
+                    font_family=FONT_FAMILY,
+                    font_color=COLORS['text_primary'],
+                    align='left'
+                )
+            )
+    
     fig.update_layout(
         plot_bgcolor=COLORS['background'],
         paper_bgcolor=COLORS['background'],
@@ -159,13 +227,6 @@ def create_scatter_plot(scatter_data):
         ),
         hovermode='closest',
         hoverdistance=5,
-        hoverlabel=dict(
-            bordercolor=COLORS['background'],
-            font_size=INLINE_FONTSIZE,
-            font_family=FONT_FAMILY,
-            font_color='white',
-            align='left'
-        ),
         legend_itemclick="toggleothers",
     )
     
@@ -295,11 +356,14 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
     clusters = sankey_data["CLUSTER"].unique()
     descriptions = sankey_data["DESCRIPTION"].unique()
     countries = sankey_data["COUNTRY_CODE"].unique()
+    
+    # Map country codes to country names
+    country_names = [COUNTRY_CODES_NAMES.get(code, code) for code in countries]
 
     # ---------------------------------------------------------------------
     # Tier order: DESCRIPTION -> CLUSTER -> COUNTRY
     # ---------------------------------------------------------------------
-    node_labels = list(descriptions) + list(clusters) + list(countries)
+    node_labels = list(descriptions) + list(clusters) + country_names
 
     # Create index mapping
     desc_indices = {desc: i for i, desc in enumerate(descriptions)}
@@ -406,7 +470,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
             node_y.append((country_idx + 0.5) / max(len(countries), 1))
             # add a different x position for country == 'ES' as it has the largest node lentgh
             if countries[country_idx] == 'ES':
-                node_x.append(0.91)
+                node_x.append(0.87)
             else:
                 node_x.append(0.98)
     
@@ -454,7 +518,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         node_colors = dimmed_node_colors
 
     # Hide description labels (too many); show clusters + countries
-    node_text_labels = [""] * len(descriptions) + list(clusters) + list(countries)
+    node_text_labels = [""] * len(descriptions) + list(clusters) + country_names
 
     # If a node is selected, show tier-1 (descriptions) as *annotations* instead
     # of Sankey node labels, because Plotly Sankey has a single global font size
@@ -535,6 +599,15 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         margin=dict(l=0, r=0, t=10, b=30),
         font_family=FONT_FAMILY,
         annotations=description_label_annotations,
+        hoverlabel=dict(
+            bordercolor='rgba(0,0,0,0)',
+            font_size=INLINE_FONTSIZE,
+            font_family=FONT_FAMILY,
+            # Note: Sankey hoverlabel bgcolor and font_color are set globally
+            # Individual node colors are handled by the node color array
+            bgcolor=COLORS['background'],
+            font_color=COLORS['text_primary'],
+        ),
     )
     
     return fig
@@ -625,6 +698,17 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
 
         base_hex = CLUSTER_COLORS.get(cluster, "#bbbaba")
         colorscale = create_colorscale(base_hex)
+        
+        # Map country codes to country names for hover
+        df_cluster = df_cluster.copy()
+        df_cluster['COUNTRY'] = df_cluster['COUNTRY_CODE'].map(COUNTRY_CODES_NAMES)
+        df_cluster['COUNTRY'] = df_cluster['COUNTRY'].fillna(df_cluster['COUNTRY_CODE'])
+        
+        # Prepare customdata as numpy array for proper formatting
+        customdata_array = np.column_stack([
+            df_cluster['COUNTRY'].values,
+            (df_cluster['COVER_KM'] / 1000).values
+        ])
 
         fig.add_trace(
             go.Choropleth(
@@ -636,11 +720,18 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
                 marker_line_width=0.4,
                 marker_line_color=COLORS["white"],
                 showscale=False,
-                # Keep absolute values in customdata for hover (more informative)
-                customdata=df_cluster["COVER_KM"] / 1000,
-                hovertemplate="<b>%{location}</b><br>"
-                "Cover: %{customdata:.0f}k km²<br>"
+                # Keep absolute values and country name in customdata for hover
+                customdata=customdata_array,
+                hovertemplate="<b>%{customdata[0]}</b><br>"
+                "Cover: %{customdata[1]:.0f}k km²<br>"
                 "Proportion: %{z:.1%}<extra></extra>",
+                hoverlabel=dict(
+                    bgcolor=base_hex,
+                    bordercolor='rgba(0,0,0,0)',
+                    font_size=INLINE_FONTSIZE,
+                    font_family=FONT_FAMILY,
+                    font_color=get_text_color_for_background(base_hex),
+                ),
             ),
             row=r,
             col=c,
@@ -727,6 +818,8 @@ def create_species_pictogram(species_count_data):
             # Move to next position along spiral
             current_angle += angular_spacing
         
+        species_color = get_species_color(stype)
+        text_color = get_text_color_for_background(species_color)
         series.append(
             go.Scatter(
                 x=_x, 
@@ -736,10 +829,17 @@ def create_species_pictogram(species_count_data):
                     'symbol': 'circle', 
                     'line': dict(width=0), 
                     'size': 10, 
-                    'color': get_species_color(stype)
+                    'color': species_color
                 }, 
                 name=f'{stype} ({row.COUNT_HUNDREDS})',
-                hovertemplate=f'{stype} ({row.COUNT_HUNDREDS})<extra></extra>'
+                hovertemplate=f'{stype} ({row.COUNT_HUNDREDS})<extra></extra>',
+                hoverlabel=dict(
+                    bgcolor=species_color,
+                    bordercolor='rgba(0,0,0,0)',
+                    font_size=INLINE_FONTSIZE,
+                    font_family=FONT_FAMILY,
+                    font_color=text_color,
+                ),
             ),
         )
     
@@ -838,6 +938,7 @@ def create_species_per_country_scatter(species_per_country, species_count_data):
         # Get base color for this species type
         base_color = get_species_color(species_type)
         colorscale = create_colorscale(base_color, alpha=1.0)
+        text_color = get_text_color_for_background(base_color)
         
         # Calculate size reference (max size = 50 pixels)
         sizeref = data.COUNT.max() / 50 if data.COUNT.max() > 0 else 1
@@ -865,7 +966,14 @@ def create_species_per_country_scatter(species_per_country, species_count_data):
                 f'<b>{species_type}</b><br>' +
                 'Country: %{text}<br>' +
                 'Count: %{marker.size}<extra></extra>'
-            )
+            ),
+            hoverlabel=dict(
+                bgcolor=base_color,
+                bordercolor='rgba(0,0,0,0)',
+                font_size=INLINE_FONTSIZE,
+                font_family=FONT_FAMILY,
+                font_color=text_color,
+            ),
         ))
     
     # Update layout
@@ -880,7 +988,7 @@ def create_species_per_country_scatter(species_per_country, species_count_data):
             gridcolor='rgba(252, 255, 247, 0.3)',
         ),
         xaxis=dict(
-            title="Country Code",
+            title="Country",
             zeroline=False,
             gridcolor='rgba(252, 255, 247, 0.3)',
             gridwidth=0.8,        ),
@@ -929,21 +1037,10 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
     
     if species_data.empty:
         # Return empty figure with message
-        fig = go.Figure()
-        fig.add_annotation(
-            text=f"No data available for species type: {species_type}",
-            xref="paper", yref="paper",
-            x=0.5, y=0.5,
-            showarrow=False,
-            font=dict(size=16, color=COLORS['text_primary'])
-        )
-        fig.update_layout(
-            height=600,
-            width=900,
-            plot_bgcolor=COLORS['background'],
-            paper_bgcolor=COLORS['background'],
-        )
-        return fig
+        print(f'Warning: No data available for species type: {species_type}, switching to default: Fish data')
+        species_data = species_count_sites[
+            species_count_sites['SPGROUP'] == 'Fish'
+        ].copy()
     
     # Get base color for this species type
     base_color = get_species_color(species_type)
@@ -975,6 +1072,7 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
     )
     
     # Update marker styling and add custom hover template
+    text_color = get_text_color_for_background(base_color)
     fig.update_traces(
         marker=dict(
             line=dict(width=0.1, color=COLORS['white'])
@@ -983,7 +1081,14 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
             "<b>%{hovertext}</b><br>" +
             "%{customdata[0]}" +
             "<extra></extra>"
-        )
+        ),
+        hoverlabel=dict(
+            bgcolor=base_color,
+            bordercolor='rgba(0,0,0,0)',
+            font_size=INLINE_FONTSIZE,
+            font_family=FONT_FAMILY,
+            font_color=text_color,
+        ),
     )
     
     # Update layout with same geo settings as choropleth, but with visible borders
