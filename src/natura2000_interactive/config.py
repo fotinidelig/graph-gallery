@@ -21,7 +21,7 @@ APP_DEBUG = True
 
 # Visualization settings
 SCATTER_SPIRAL_CONFIG = {
-    'a': 0.1,           # Initial radius offset
+    'a': 0.15,           # Initial radius offset
     'b': 0.2,           # Radial growth factor
     'theta_max': 6,     # Number of turns (multiplied by pi)
     'scale_x': 1.2,     # Horizontal scaling
@@ -30,7 +30,8 @@ SCATTER_SPIRAL_CONFIG = {
 }
 
 # Styling settings
-FONT_FAMILY = 'Noto Sans Mono'
+FONT_FAMILY = 'Noto Sans Mono'  # For plots
+FONT_FAMILY_STORY = 'Playfair Display'  # For story text
 PRIMARY_COLOR = '#3498db'  # Keep for accent/links if needed
 INLINE_FONTSIZE = 12
 
@@ -39,7 +40,9 @@ COLORS = {
     'background': '#BCCAB9',
     'text_primary': '#2A1800',
     'details': '#7B8A6E',
-    'white': '#FCFFF7'
+    'white': '#FCFFF7',
+    'natura_blue': '#063e97',
+    'natura_green': '#009e82'
 }
 
 COUNTRY_CODES_NAMES = {

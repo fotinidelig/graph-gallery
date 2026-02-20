@@ -29,7 +29,7 @@ from visualizations import (
     create_species_per_country_scatter,
     create_species_scatter_map
 )
-from config import APP_PORT, APP_DEBUG, FONT_FAMILY, COLORS
+from config import APP_PORT, APP_DEBUG, FONT_FAMILY, FONT_FAMILY_STORY, COLORS
 
 
 # Initialize app with minimal Bootstrap theme
@@ -81,6 +81,7 @@ except Exception as e:
 
 # Format CSS with config values
 font_family_css = FONT_FAMILY.replace(' ', '+')
+font_family_story_css = FONT_FAMILY_STORY.replace(' ', '+')
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -91,6 +92,7 @@ app.index_string = '''
         {%css%}
         <style>
             @import url('https://fonts.googleapis.com/css2?family=''' + font_family_css + ''':wght@300;400;500;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
             
             * {
                 margin: 0;
@@ -99,7 +101,7 @@ app.index_string = '''
             }
             
             body {
-                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
                 background:  ''' + COLORS["background"] + ''';
                 color: ''' + COLORS['text_primary'] + ''';
                 line-height: 1.6;
@@ -121,6 +123,7 @@ app.index_string = '''
             }
             
             .story-text {
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
                 font-size: 1.1rem;
                 line-height: 1.8;
                 margin-bottom: 3rem;
@@ -131,6 +134,7 @@ app.index_string = '''
             }
             
             .story-text h1 {
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
                 font-size: 2.5rem;
                 font-weight: 600;
                 margin-bottom: 1.5rem;
@@ -138,6 +142,7 @@ app.index_string = '''
             }
             
             .story-text h2 {
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
                 font-size: 1.8rem;
                 font-weight: 500;
                 margin-bottom: 1rem;
@@ -145,6 +150,7 @@ app.index_string = '''
             }
             
             .story-text p {
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
                 margin-bottom: 1.5rem;
             }
             
@@ -173,6 +179,7 @@ app.index_string = '''
                 padding: 0.75rem 1rem;
                 border-radius: 4px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                font-family: ''' + FONT_FAMILY + ''', monospace;
                 font-size: 0.75rem;
                 color: ''' + COLORS['text_primary'] + ''';
                 max-width: 200px;
@@ -247,6 +254,7 @@ app.index_string = '''
                 border-left: 3px solid ''' + COLORS['details'] + ''';
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                 position: relative;
+                font-family: ''' + FONT_FAMILY + ''', monospace;
             }
             
             .plot-container.reverse .annotation {
@@ -273,6 +281,7 @@ app.index_string = '''
             }
             
             .annotation h3 {
+                font-family: ''' + FONT_FAMILY + ''', monospace;
                 font-size: 1.2rem;
                 font-weight: 500;
                 margin-bottom: 0.5rem;
@@ -280,6 +289,7 @@ app.index_string = '''
             }
             
             .annotation p {
+                font-family: ''' + FONT_FAMILY + ''', monospace;
                 font-size: 0.95rem;
                 color: ''' + COLORS['text_primary'] + ''';
                 opacity: 0.8;
@@ -336,6 +346,191 @@ app.index_string = '''
             .dash-dropdown-grid-container {
                 border: none !important;
             }
+            
+            /* Story content wrapper */
+            /* PADDING ADJUSTMENT: Change padding values to adjust spacing around content */
+            /* Format: padding: [top] [right] [bottom] [left] or padding: [vertical] [horizontal] */
+            .story-content {
+                position: relative;
+                z-index: 2;
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 2rem 2rem;  /* ADJUST THIS: Reduced from 4rem vertical. Increase for more space, decrease for less */
+            }
+            
+            
+            /* Story point styling - plain text, no boxes */
+            /* MARGIN ADJUSTMENT: Change the values below to adjust spacing between story points and plots */
+            /* Format: margin: [top] [right] [bottom] [left] or margin: [vertical] [horizontal] */
+            /* Examples: '3rem 0' (3rem top/bottom, 0 left/right), '2rem 0 4rem 0' (2rem top, 0 right, 4rem bottom, 0 left) */
+            .story-point {
+                position: relative;
+                z-index: 2;
+                margin: 3rem 0;  /* ADJUST THIS: Reduced from 8rem. Increase for more space, decrease for less */
+                max-width: 500px;
+            }
+            
+            .story-point.left {
+                margin-left: 25%;
+                margin-right: auto;
+                text-align: left;
+            }
+            
+            .story-point.right {
+                margin-left: auto;
+                margin-right: 25%;
+                text-align: right;
+            }
+            
+            .story-point.center {
+                margin-left: auto;
+                margin-right: auto;
+                text-align: center;
+            }
+            
+            .story-point p {
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
+                font-size: 1.5rem;  /* ADJUST THIS: Increased from 1.3rem for Pompiere. Change to adjust story text size */
+                line-height: 1.8;
+                color: ''' + COLORS['text_primary'] + ''';
+                margin: 0;
+            }
+            
+            /* Make numbers bold in story text */
+            .story-point p strong {
+                font-weight: bold;
+            }
+            
+            /* Story point with plot side by side */
+            /* MARGIN ADJUSTMENT: Change margin to adjust spacing for side-by-side story and plot */
+            .story-point-with-plot {
+                display: flex;
+                align-items: center;
+                gap: 2rem;
+                margin: 3rem 0;  /* ADJUST THIS: Reduced from 6rem. Increase for more space, decrease for less */
+                max-width: 1400px;
+            }
+            
+            .story-point-with-plot .story-point {
+                flex: 0 0 45%;
+                margin: 0;
+            }
+            
+            .story-point-with-plot .plot-wrapper {
+                flex: 0 0 50%;
+            }
+            
+            /* Natura 2000 text styling */
+            .natura-text {
+                color: ''' + COLORS['natura_blue'] + ''';
+                font-weight: 600;
+            }
+            
+            /* Main title */
+            .main-title {
+                position: relative;
+                z-index: 2;
+                text-align: center;
+                font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
+                font-size: 3.5rem;
+                font-weight: 600;
+                margin: 4rem auto 8rem auto;
+                max-width: 800px;
+                color: ''' + COLORS['text_primary'] + ''';
+            }
+            
+            /* Plot with toggleable annotation */
+            /* MARGIN ADJUSTMENT: Change margin values to adjust spacing above/below plots */
+            .plot-with-annotation {
+                position: relative;
+                margin: 3rem 0;  /* ADJUST THIS: Reduced from 6rem. Increase for more space, decrease for less */
+                display: flex;
+                justify-content: center;  /* Changed from flex-end to center the plot */
+            }
+            
+            .plot-right {
+                flex: 0 0 80%;  /* Increased from 70% to make centered plot wider */
+                max-width: 1200px;  /* Added max-width to prevent it from getting too wide */
+                position: relative;
+            }
+            
+            /* Toggleable graph annotation */
+            .toggle-annotation {
+                position: absolute;
+                left: -60px;
+                top: 10px;
+                z-index: 10;
+                display: flex;
+                align-items: flex-start;
+            }
+            
+            .toggle-annotation-button {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: ''' + COLORS['white'] + ''';
+                border: 2px solid ''' + COLORS['details'] + ''';
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                transition: all 0.3s ease;
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-size: 1.2rem;
+                color: ''' + COLORS['text_primary'] + ''';
+                z-index: 11;
+            }
+            
+            .toggle-annotation-button:hover {
+                background: ''' + COLORS['details'] + ''';
+                color: ''' + COLORS['white'] + ''';
+                transform: scale(1.1);
+            }
+            
+            .toggle-annotation-content {
+                position: absolute;
+                right: 50px;
+                top: 0;
+                background: ''' + COLORS['white'] + ''';
+                background: rgba(252, 255, 247, 0.95);
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-size: 0.85rem;
+                color: ''' + COLORS['text_primary'] + ''';
+                max-width: 320px;
+                width: 320px;
+                line-height: 1.4;
+                border-right: 3px solid ''' + COLORS['details'] + ''';
+                backdrop-filter: blur(4px);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                transform: translateX(10px);
+                white-space: normal;
+            }
+            
+            .toggle-annotation-content.visible {
+                opacity: 1;
+                visibility: visible;
+                transform: translateX(0);
+            }
+            
+            .toggle-annotation-content h3 {
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                color: ''' + COLORS['text_primary'] + ''';
+            }
+            
+            .toggle-annotation-content p {
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                margin: 0;
+                font-size: 0.85rem;
+            }
         </style>
     </head>
     <body>
@@ -367,270 +562,226 @@ app.index_string = '''
 # ============================================================================
 
 app.layout = html.Div([
-    # Title Section
+    # Story content wrapper
     html.Div([
+        
+        # Main Title
+        html.H1([
+            "Exploring the ",
+            html.Span("Natura 2000", className="natura-text"),
+            " network"
+        ], className="main-title center"),
+        
+        # Story Point 1 - positioned left
+        html.Div([
+            html.P([
+                html.Span("Natura 2000", className="natura-text"),
+                " is the largest network of protected areas in the world."
+            ])
+        ], className="story-point left"),
+        
+        # Story Point 2 - positioned right
+        html.Div([
+            html.P([
+                "Spanning all across Europe and covering more than ",
+                html.Strong("18%"),
+                " land and ",
+                html.Strong("7%"),
+                " marine area as of ",
+                html.Strong("2017"),
+                "."
+            ])
+        ], className="story-point right"),
+        
+        # Story Point 3 - positioned left
+        html.Div([
+            html.P([
+                "There are ",
+                html.Strong("27"),
+                " different habitats, which we can cluster into ",
+                html.Strong("8"),
+                " categories, and over ",
+                html.Strong("280 thousand"),
+                " protected sites."
+            ])
+        ], className="story-point left"),
+        
+        # Scatter Plot with Toggleable Annotation
         html.Div([
             html.Div([
-                html.H1("Natura 2000", className="text-center"),
-                html.P(
-                    "Exploring Europe's protected habitats through data visualization",
-                    className="text-center",
-                    style={'fontSize': '1.2rem', 'color': COLORS['details'], 'marginTop': '1rem'}
-                )
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section", style={'minHeight': '60vh'}),
+                html.Div([
+                    html.Button(
+                        "ℹ",
+                        id="toggle-annotation-btn",
+                        className="toggle-annotation-button",
+                        n_clicks=0
+                    ),
+                    html.Div([
+                        html.H3("Explore the data"),
+                        html.P([
+                            "Explore the data by hovering over them, clicking, zooming in/out, or selecting various regions."
+                        ])
+                    ], id="toggle-annotation-content", className="toggle-annotation-content")
+                ], className="toggle-annotation"),
+                dcc.Graph(
+                    id='scatter-plot',
+                    figure=create_scatter_plot(scatter_data),
+                    config={'displayModeBar': False}
+                ),
+            ], className="plot-right")
+        ], className="plot-with-annotation"),
+        
+    ], className="story-content"),  # Close story-content wrapper
     
-    # Introduction Text
+    # Story Point: These habitats are found in 27 countries
     html.Div([
         html.Div([
-            html.Div([
-                html.H2("Understanding Habitat Distribution", className="text-center",),
-                html.P([
-                    "The Natura 2000 network is the largest coordinated network of protected areas in the world, ",
-                    "covering over 18% of the EU's land area and more than 8% of its marine territory. ",
-                    "This visualization explores the diversity and distribution of habitats across Europe."
-                ], className="text-center",)
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section"),
+            html.P([
+                "These habitats are found in ",
+                html.Strong("27"),
+                " countries, in different countries."
+            ])
+        ], className="story-point left")
+    ], className="story-content"),
     
-    # Scatter Plot Section
+    # Sankey Diagram with Toggleable Annotation
     html.Div([
         html.Div([
             html.Div([
                 html.Div([
+                    html.Button(
+                        "ℹ",
+                        id="toggle-sankey-annotation-btn",
+                        className="toggle-annotation-button",
+                        n_clicks=0
+                    ),
                     html.Div([
-                        html.H3("Habitat Diversity", className="text-center",),
+                        html.H3("Explore the data"),
                         html.P([
-                            "Each point represents a unique habitat type, positioned in a spiral pattern. ",
-                            "The size of each circle reflects the total area covered, while colors indicate ",
-                            "the habitat cluster. Hover to explore individual habitats."
-                        ], className="text-center",)
-                    ], className="annotation"),
-                    html.Div([
-                        dcc.Graph(
-                            id='scatter-plot',
-                            figure=create_scatter_plot(scatter_data),
-                            config={'displayModeBar': False}
-                        ),
-                        # Example annotation - you can add more or remove this
-                        html.Div(
-                            "Largest habitats by area",
-                            className="graph-annotation arrow-right",
-                            style={'top': '45%', 'right': '10%'}
-                        ),
-                    ], className="plot-wrapper", style={'position': 'relative'})
-                ], className="plot-container")
-            ], className="story-container")
-        ], className="story-container")
-    ], className="story-section"),
+                            "Notice how certain habitat clusters are concentrated in specific regions, reflecting Europe's diverse ecosystems from Mediterranean coasts to Nordic forests."
+                        ])
+                    ], id="toggle-sankey-annotation-content", className="toggle-annotation-content")
+                ], className="toggle-annotation"),
+                dcc.Store(id='sankey-selected-node', data=None),
+                dcc.Graph(
+                    id='sankey-plot',
+                    figure=create_sankey_diagram(sankey_data),
+                    config={'displayModeBar': False}
+                ),
+            ], className="plot-right")
+        ], className="plot-with-annotation")
+    ], className="story-content"),
     
-    # Middle Text Section
+    # Story Point: Spain has the most protected area
     html.Div([
         html.Div([
-            html.Div([
-                html.H2("From Clusters to Countries", className="text-center",),
-                html.P([
-                    "The following Sankey diagram shows how habitat clusters break down into specific ",
-                    "habitat types, and how these are distributed across European countries. ",
-                    "The flow width represents the total area covered."
-                ], className="text-center",)
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section"),
+            html.P([
+                "Spain notably has the most protected area..."
+            ])
+        ], className="story-point right")
+    ], className="story-content"),
     
-    # Sankey Diagram Section
+    # Story Point: For almost every category
     html.Div([
         html.Div([
-            html.Div([
-                html.Div([
-                    html.Div([
-                        dcc.Store(id='sankey-selected-node', data=None),  # Store selected node index
-                        dcc.Graph(
-                            id='sankey-plot',
-                            figure=create_sankey_diagram(sankey_data),
-                            config={'displayModeBar': False}
-                        ),
-                        # Example annotation - you can add more or remove this
-                        # html.Div(
-                        #     "Habitat clusters",
-                        #     className="graph-annotation arrow-left",
-                        #     style={'top': '15%', 'right': '5%'}
-                        # ),
-                    ], className="plot-wrapper", style={'position': 'relative'}),
-                    html.Div([
-                        html.H3("Geographic Distribution", className="text-center",),
-                        html.P([
-                            "This flow diagram reveals the geographic patterns of habitat distribution. ",
-                            "Notice how certain habitat clusters are concentrated in specific regions, ",
-                            "reflecting Europe's diverse ecosystems from Mediterranean coasts to Nordic forests."
-                        ], className="text-center",)
-                    ], className="annotation")
-                ], className="plot-container reverse")
-            ], className="story-container")
-        ], className="story-container")
-    ], className="story-section"),
+            html.P([
+                "...for almost every category of habitat, which we can observe when looking at the distribution of habitat coverage over countries."
+            ])
+        ], className="story-point left")
+    ], className="story-content"),
     
-    # Middle Text Section - Transition to Country View
-    html.Div([
-        html.Div([
-            html.Div([
-                html.H2("Country-Specific Distribution", className="text-center",),
-                html.P([
-                    "Zooming into individual countries reveals how each habitat cluster is distributed ",
-                    "across Europe. Each map shows the total coverage of one cluster type, with darker ",
-                    "shades indicating greater coverage."
-                ], className="text-center",)
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section"),
-    
-    # Choropleth Grid Section (only if data is available)
+    # Choropleth Grid Section (centered)
 ] + ([
     html.Div([
         html.Div([
-            html.Div([
-                dcc.Graph(
-                    id='choropleth-grid',
-                    figure=create_cluster_choropleth_grid(choropleth_data, europe_gdf),
-                    config={'displayModeBar': False}
-                )
-            ], className="story-container")
-        ], className="story-container")
-    ], className="story-section")
+            dcc.Graph(
+                id='choropleth-grid',
+                figure=create_cluster_choropleth_grid(choropleth_data, europe_gdf),
+                config={'displayModeBar': False}
+            )
+        ])  # Removed maxWidth - uses full width of story-content wrapper. ADJUST: Change '3rem' in margin to adjust vertical spacing
+    ], className="story-content", style={'maxWidth': '850px'})
 ] if choropleth_data is not None and europe_gdf is not None else []) + [
     
-    # Middle Text Section - Transition to Species View
-    html.Div([
-        html.Div([
-            html.Div([
-                html.H2("Protected Species", className="text-center",),
-                html.P([
-                    "Beyond habitats, the Natura 2000 network protects thousands of species across Europe. ",
-                    "The following visualization shows the diversity of protected species by type, ",
-                    "with each marker representing 100 species."
-                ], className="text-center",)
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section"),
-    
-    # Species Pictogram Section (only if data is available)
+    # Story Point: Network tracks over 35 thousand species with Pictogram
 ] + ([
     html.Div([
         html.Div([
             html.Div([
-                html.Div([
-                    html.Div([
-                        html.H3("Species Diversity", className="text-center",),
-                        html.P([
-                            "Each circle represents 100 species, arranged in a grid. ",
-                            "Colors distinguish different species groups, from plants and invertebrates ",
-                            "to birds, mammals, and more. Explore the legend to see the count for each group."
-                        ], className="text-center",)
-                    ], className="annotation"),
-                    html.Div([
-                        dcc.Graph(
-                            id='species-pictogram',
-                            figure=create_species_pictogram(species_count_data),
-                            config={'displayModeBar': False}
-                        ),
-                    ], className="plot-wrapper", style={'position': 'relative'})
-                ], className="plot-container")
-            ], className="story-container")
-        ], className="story-container")
-    ], className="story-section")
+                html.P([
+                    "The network also tracks over ",
+                    html.Strong("35 thousand"),
+                    " threatened species, such as birds, plants, and more."
+                ])
+            ], className="story-point left"),
+            html.Div([
+                dcc.Graph(
+                    id='species-pictogram',
+                    figure=create_species_pictogram(species_count_data),
+                    config={'displayModeBar': False}
+                ),
+            ], className="plot-wrapper")
+        ], className="story-point-with-plot")
+    ], className="story-content")
 ] if species_count_data is not None else []) + [
     
-    # Middle Text Section - Transition to Species by Country
+    # Story Point: Species spread across Europe
     html.Div([
         html.Div([
-            html.Div([
-                html.H2("Species Distribution by Country", className="text-center",),
-                html.P([
-                    "The following visualization shows how different species types are distributed across European countries. ",
-                    "Each row represents a species type, and each marker shows the number of species found in that country. ",
-                    "Marker size and color intensity both encode the species count."
-                ], className="text-center",)
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section") if species_per_country is not None and species_count_data is not None else [],
+            html.P([
+                "These species spread across Europe, though the largest proportion lives in the Mediterranean and Atlantic regions."
+            ])
+        ], className="story-point right")
+    ], className="story-content"),
     
-    # Species per Country Scatter Plot Section (only if data is available)
-] + ([
+    # Story Point: Protected sites with varying richness
     html.Div([
         html.Div([
-            html.Div([
-                html.Div([
-                    html.Div([
-                        dcc.Graph(
-                            id='species-per-country-scatter',
-                            figure=create_species_per_country_scatter(species_per_country, species_count_data),
-                            config={'displayModeBar': False}
-                        ),
-                    ], className="plot-wrapper", style={'position': 'relative'})
-                ], className="plot-container", style={'flexDirection': 'column'})
-            ], className="story-container")
-        ], className="story-container")
-    ], className="story-section")
-] if species_per_country is not None and species_count_data is not None else []) + [
-    
-    # Middle Text Section - Transition to Species Distribution Map
-    html.Div([
-        html.Div([
-            html.Div([
-                html.H2("Species Distribution Across Sites", className="text-center",),
-                html.P([
-                    "Explore the geographic distribution of different species types across Natura 2000 sites. ",
-                    "Select a species type from the dropdown to see where these species are found. ",
-                    "Marker size and color intensity both represent the number of species at each site."
-                ], className="text-center",)
-            ], className="story-text")
-        ], className="story-container")
-    ], className="story-section") if species_count_sites is not None and europe_gdf is not None else [],
+            html.P([
+                html.Span("Natura 2000", className="natura-text"),
+                " comprises protected sites with varying richness in terms of species."
+            ])
+        ], className="story-point left")
+    ], className="story-content"),
     
     # Species Scatter Map Section (only if data is available)
 ] + ([
     html.Div([
         html.Div([
             html.Div([
+                html.Label("Select Species Type:", style={'fontSize': '1rem', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
                 html.Div([
-                    html.Div([
-                        html.Label("Select Species Type:", style={'fontSize': '1rem', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
-                        html.Div([
-                            dcc.Dropdown(
-                                id='species-type-dropdown',
-                                clearable=False,
-                                searchable=False,
-                                options=[
-                                    {'label': stype, 'value': stype} 
-                                    for stype in sorted(species_count_sites['SPGROUP'].unique())
-                                ],
-                                value=sorted(species_count_sites['SPGROUP'].unique())[0] if len(species_count_sites['SPGROUP'].unique()) > 0 else None,
-                                style={
-                                    'backgroundColor': COLORS['white'],
-                                    'color': COLORS['text_primary'],
-                                    'fontFamily': FONT_FAMILY
-                                }
-                            ),
-                        ], className='modern-dropdown-wrapper'),
-                    ], style={
-                        'maxWidth': '200px',
-                        'marginTop': 'auto',      # Vertical positioning (top margin) - use px/rem values like '20px', '1rem'
-                        'marginBottom': '1rem', # Vertical positioning (bottom margin)
-                        'marginLeft': 'auto',   # Horizontal positioning (left margin - 'auto' centers, or use px/% values like '20px', '10%')
-                        'marginRight': 'auto'  # Horizontal positioning (right margin - 'auto' centers, or use px/% values)
-                    }),
-                    html.Div([
-                        dcc.Graph(
-                            id='species-scatter-map',
-                            config={'displayModeBar': False}
-                        ),
-                    ], className="plot-wrapper", style={'position': 'relative'})
-                ], className="plot-container", style={'flexDirection': 'column'})
-            ], className="story-container")
-        ], className="story-container")
-    ], className="story-section")
+                    dcc.Dropdown(
+                        id='species-type-dropdown',
+                        clearable=False,
+                        searchable=False,
+                        options=[
+                            {'label': stype, 'value': stype} 
+                            for stype in sorted(species_count_sites['SPGROUP'].unique())
+                        ],
+                        value=sorted(species_count_sites['SPGROUP'].unique())[0] if len(species_count_sites['SPGROUP'].unique()) > 0 else None,
+                        style={
+                            'backgroundColor': COLORS['white'],
+                            'color': COLORS['text_primary'],
+                            'fontFamily': FONT_FAMILY
+                        }
+                    ),
+                ], className='modern-dropdown-wrapper'),
+            ], style={
+                'maxWidth': '200px',
+                'marginTop': 'auto',
+                'marginBottom': '1rem',
+                'marginLeft': 'auto',
+                'marginRight': 'auto'
+            }),
+            html.Div([
+                dcc.Graph(
+                    id='species-scatter-map',
+                    config={'displayModeBar': False}
+                ),
+            ], className="plot-wrapper", style={'position': 'relative'})
+        ], className="plot-container", style={'flexDirection': 'column', 'maxWidth': '1200px', 'margin': '0 auto'})
+    ], className="story-content")
 ] if species_count_sites is not None and europe_gdf is not None else []) + [
     
     # Closing Text
@@ -640,7 +791,9 @@ app.layout = html.Div([
                 html.H2("Exploring Further", className="text-center",),
                 html.P([
                     "These visualizations provide just a glimpse into the rich biodiversity data ",
-                    "available through the Natura 2000 network. Each habitat tells a story of ",
+                    "available through the ",
+                    html.Span("Natura 2000", className="natura-text"),
+                    " network. Each habitat tells a story of ",
                     "conservation efforts and ecological importance across Europe."
                 ], className="text-center",)
             ], className="story-text")
@@ -687,6 +840,34 @@ def update_sankey_on_click(clickData, current_selected_node):
         filtered_fig = create_sankey_diagram(sankey_data, selected_node_index=point_number)
         return filtered_fig, point_number
 
+
+@app.callback(
+    Output('toggle-annotation-content', 'className'),
+    Input('toggle-annotation-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def toggle_annotation(n_clicks):
+    if n_clicks is None or n_clicks == 0:
+        return "toggle-annotation-content"
+    # Toggle visibility based on even/odd clicks
+    if n_clicks % 2 == 1:
+        return "toggle-annotation-content visible"
+    else:
+        return "toggle-annotation-content"
+
+@app.callback(
+    Output('toggle-sankey-annotation-content', 'className'),
+    Input('toggle-sankey-annotation-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def toggle_sankey_annotation(n_clicks):
+    if n_clicks is None or n_clicks == 0:
+        return "toggle-annotation-content"
+    # Toggle visibility based on even/odd clicks
+    if n_clicks % 2 == 1:
+        return "toggle-annotation-content visible"
+    else:
+        return "toggle-annotation-content"
 
 @app.callback(
     Output('species-scatter-map', 'figure'),
