@@ -139,13 +139,13 @@ def create_scatter_plot(scatter_data):
     scatter_data_copy = scatter_data.copy()
     scatter_data_copy['x'] = x
     scatter_data_copy['y'] = y
-    scatter_data_copy['Count (k)'] = (scatter_data_copy.COUNT/1000).map(
+    scatter_data_copy['No. sites (k)'] = (scatter_data_copy.COUNT/1000).map(
         lambda x: np.round(x, decimals=2)
     )
-    scatter_data_copy['Cover (k km2)'] = (scatter_data_copy.COVER_KM/1000).map(
+    scatter_data_copy['Area covered (k km2)'] = (scatter_data_copy.COVER_KM/1000).map(
         lambda x: int(x)
     )
-    
+    # print(scatter_data_copy['COUNT'].sum()/1000)
     fig = px.scatter(
         scatter_data_copy,
         x='x',
@@ -154,12 +154,20 @@ def create_scatter_plot(scatter_data):
         color='CLUSTER',
         color_discrete_map=CLUSTER_COLORS,
         hover_name='DESCRIPTION',
-        hover_data={
-            'x': False, 'y': False, 'COVER_KM': False,
-            'DESCRIPTION': False, 'COUNT': False, 
-            'Count (k)': True, 'Cover (k km2)': True
-        },
+        labels=dict(CLUSTER='Habitat type'),
         size_max=50,
+    )
+    
+    # Add customdata and hovertemplate via update_traces
+    fig.update_traces(
+        customdata=np.column_stack(
+            ((scatter_data_copy['COUNT']/1000).values, (scatter_data_copy['COVER_KM']/1000).values)
+        ),
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"+
+            "No. sites: %{customdata[0]:.1f}k<br>"+
+            "Area covered: %{customdata[1]:.1f}k km²<extra></extra>"
+        )
     )
     
     # Update traces with marker styling and per-trace hoverlabel
@@ -202,7 +210,7 @@ def create_scatter_plot(scatter_data):
                     font_color=COLORS['text_primary'],
                     align='left'
                 )
-            )
+    )
     
     fig.update_layout(
         plot_bgcolor=COLORS['background'],
@@ -227,57 +235,10 @@ def create_scatter_plot(scatter_data):
         ),
         hovermode='closest',
         hoverdistance=5,
+        legend=dict(title_text='Types of Habitats'),
         legend_itemclick="toggleothers",
     )
     
-    # Point to a specific bubble (e.g., index 0, or find by description)
-
-    target_idx = scatter_data_copy[scatter_data_copy['DESCRIPTION'] == 'Evergreen woodland'].index[0]
-    target_x = scatter_data_copy.loc[target_idx, 'x']
-    target_y = scatter_data_copy.loc[target_idx, 'y']
-
-    # fig.add_annotation(
-    #     x=target_x,
-    #     y=target_y,
-    #     text="The larger the bubble,<br>the more area is covered<br>(kilo km2)",
-    #     showarrow=True,
-    #     arrowhead=2,
-    #     arrowsize=1.3,
-    #     arrowwidth=1.5,
-    #     arrowcolor=rgb_to_rgba(mcolors.to_rgb(COLORS['white']), 0.7),
-    #     ax=90,
-    #     ay=-25,
-    #     bgcolor=rgb_to_rgba(mcolors.to_rgb(COLORS['white']), 0.7),
-    #     bordercolor=rgb_to_rgba(mcolors.to_rgb(COLORS['white']), 0.7),
-    #     borderwidth=0,
-    #     font=dict(size=12, family='Noto Sans Mono', color=COLORS['text_primary']),
-    #     xanchor='left',
-    #     yanchor='bottom'
-    # )
-
-    target_idx = scatter_data_copy[scatter_data_copy['DESCRIPTION'] == 'Broad-leaved deciduous woodland'].index[0]
-    target_x = scatter_data_copy.loc[target_idx, 'x']
-    target_y = scatter_data_copy.loc[target_idx, 'y']
-
-    # fig.add_annotation(
-    #     x=target_x,
-    #     y=target_y,
-    #     text="Habitats closer to the center are more popular<br>(by count of habitat occurences).",
-    #     showarrow=True,
-    #     arrowhead=2,
-    #     arrowsize=1.3,
-    #     arrowwidth=1.5,
-    #     arrowcolor=rgb_to_rgba(mcolors.to_rgb(COLORS['white']), 0.7),
-    #     ax=120,
-    #     ay=-30,
-    #     bgcolor=rgb_to_rgba(mcolors.to_rgb(COLORS['white']), 0.7),
-    #     bordercolor=rgb_to_rgba(mcolors.to_rgb(COLORS['white']), 0.7),
-    #     borderwidth=0,
-    #     font=dict(size=12, family='Noto Sans Mono', color=COLORS['text_primary']),
-    #     xanchor='left',
-    #     yanchor='middle',
-    # )
-
     return fig
 
 
@@ -306,51 +267,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         """Convert RGB tuple (0-1) to rgba string (0-255)."""
         r, g, b = rgb
         return f'rgba({int(r * 255)}, {int(g * 255)}, {int(b * 255)}, {alpha})'
-    
-    def wrap_text(text, max_chars_per_line=30):
-        """
-        Wrap text by adding newlines at word boundaries.
-        
-        Parameters
-        ----------
-        text : str
-            Text to wrap
-        max_chars_per_line : int
-            Maximum characters per line
-            
-        Returns
-        -------
-        str
-            Wrapped text with newlines
-        """
-        if len(text) <= max_chars_per_line:
-            return text
-        
-        words = text.split()
-        lines = []
-        current_line = []
-        current_length = 0
-        
-        for word in words:
-            # Check if adding this word would exceed the limit
-            if current_length + len(word) + (1 if current_line else 0) > max_chars_per_line:
-                if current_line:
-                    lines.append(' '.join(current_line))
-                    current_line = [word]
-                    current_length = len(word)
-                else:
-                    # Word itself is longer than max_chars_per_line, split it
-                    lines.append(word[:max_chars_per_line])
-                    current_line = [word[max_chars_per_line:]]
-                    current_length = len(word[max_chars_per_line:])
-            else:
-                current_line.append(word)
-                current_length += len(word) + (1 if len(current_line) > 1 else 0)
-        
-        if current_line:
-            lines.append(' '.join(current_line))
-        
-        return '<br>'.join(lines)
+
     
     # Get unique nodes
     clusters = sankey_data["CLUSTER"].unique()
@@ -364,7 +281,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
     # Tier order: DESCRIPTION -> CLUSTER -> COUNTRY
     # ---------------------------------------------------------------------
     node_labels = list(descriptions) + list(clusters) + country_names
-
+    
     # Create index mapping
     desc_indices = {desc: i for i, desc in enumerate(descriptions)}
     cluster_indices = {
@@ -374,7 +291,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         country: len(descriptions) + len(clusters) + i
         for i, country in enumerate(countries)
     }
-
+    
     # Create links DESCRIPTION -> CLUSTER
     desc_cluster_links = (
         sankey_data.groupby(["DESCRIPTION", "CLUSTER"])["COVER_KM"]
@@ -402,7 +319,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         country_indices[country] for country in cluster_country_links["COUNTRY_CODE"]
     ]
     value_cluster_country = cluster_country_links["COVER_KM"].tolist()
-
+    
     # Combine all links
     source = source_desc_cluster + source_cluster_country
     target = target_desc_cluster + target_cluster_country
@@ -421,16 +338,6 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         for link_idx in connected_link_indices:
             connected_nodes.add(source[link_idx])
             connected_nodes.add(target[link_idx])
-        
-        # Keep ALL links, but set unconnected ones to 0 (invisible)
-        # This preserves node positions
-        # filtered_value = []
-        # for i, v in enumerate(value):
-        #     if i in connected_link_indices:
-        #         filtered_value.append(v)  # Keep original value
-        #     else:
-        #         filtered_value.append(0)  # Hide link by setting value to 0
-        # value = filtered_value
     else:
         connected_nodes = set(range(len(node_labels)))  # All nodes are connected
         connected_link_indices = set(range(len(source)))  # All links are connected
@@ -531,34 +438,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
 
             # label_wrapped = wrap_text(node_labels[i], max_chars_per_line=28)
             node_text_labels[i] = node_labels[i].split('(')[0]
-            # label_wrapped = node_labels[i].split('(')[0]
-
-            # # Sankey uses y=0 at the top; paper coordinates use y=0 at the bottom.
-            # # We flip y so the annotation sits on the same horizontal band.
-            # y_paper = 1 - node_y[i]
-
-            # description_label_annotations.append(
-            #     dict(
-            #         xref="paper",
-            #         yref="paper",
-            #         x=node_x[i] + 0.01,
-            #         y=y_paper,
-            #         text=label_wrapped,
-            #         showarrow=False,
-            #         xanchor="left",
-            #         yanchor="middle",
-            #         align="left",
-            #         bgcolor="rgba(252, 255, 247, 0.3)",  # subtle white background (COLORS['white'] at 30% opacity)
-            #         bordercolor="rgba(252, 255, 247, 0.0)",
-            #         borderpad=1,
-            #         font=dict(
-            #             family=FONT_FAMILY,
-            #             size=max(9, INLINE_FONTSIZE - 3),
-            #             color=COLORS["text_primary"],
-            #         ),
-            #     )
-            # )
-            
+    
     fig = go.Figure(
         data=[
             go.Sankey(
@@ -595,8 +475,9 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         title="",
         font_size=INLINE_FONTSIZE,
         font_color=COLORS['text_primary'],
-        height=800,
-        margin=dict(l=0, r=0, t=10, b=30),
+        height=600,
+        width=900,
+        margin=dict(l=0, r=0, t=10, b=10),
         font_family=FONT_FAMILY,
         annotations=description_label_annotations,
         hoverlabel=dict(
@@ -605,7 +486,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
             font_family=FONT_FAMILY,
             # Note: Sankey hoverlabel bgcolor and font_color are set globally
             # Individual node colors are handled by the node color array
-            bgcolor=COLORS['background'],
+            bgcolor=COLORS['white'],
             font_color=COLORS['text_primary'],
         ),
     )
@@ -768,8 +649,8 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
 
 def create_species_pictogram(species_count_data):
     """
-    Create a pictogram-style visualization showing species counts by type.
-    Each marker represents 100 species, arranged in a spiral pattern (polar coordinates).
+    Create a radial bar chart (polar bar chart) showing species counts by type.
+    Uses log scale to handle large value ranges effectively.
     
     Parameters
     ----------
@@ -780,113 +661,163 @@ def create_species_pictogram(species_count_data):
     Returns
     -------
     plotly.graph_objects.Figure
-        Pictogram figure
+        Radial bar chart figure
     """
     # Prepare data
     species_count_data = species_count_data.copy()
-    species_count_data['COUNT_HUNDREDS'] = species_count_data['COUNT'] / 100
     
-    # Spiral parameters
-    initial_radius = 0.5  # Starting radius at the center
-    angular_spacing = 0.1  # Angular increment in radians (controls spacing along spiral)
-    radius_growth_rate = 0.09  # How much radius increases per angular step
+    # Calculate angles for each species type (evenly distributed around the circle)
+    n_species = len(species_count_data)
+    # Calculate angular width for each bar (360 degrees / number of species)
+    angular_width = 360 / n_species
     
-    # Track position along spiral (continuous angle, increasing radius)
-    current_angle = 0.0  # Start at angle 0
-    current_radius = initial_radius
+    # Create polar bar chart
+    fig = go.Figure()
     
-    series = []
+    # Get unique count values for grid lines (only show values that exist in the data)
+    unique_counts = sorted(species_count_data['COUNT'].unique())
+    min_count = species_count_data['COUNT'].min()
+    max_count = species_count_data['COUNT'].max()
     
-    for _i, row in species_count_data.iterrows():
-        _x = []
-        _y = []
-        count = int(row.COUNT_HUNDREDS)
+    # Transform counts to log scale for visualization
+    # Add small epsilon to avoid log(0) issues
+    epsilon = 1e-10
+    log_counts = [np.log10(count + epsilon) for count in species_count_data['COUNT']]
+    log_min = np.log10(min_count + epsilon)
+    log_max = np.log10(max_count + epsilon)
+    log_unique_counts = [np.log10(c + epsilon) for c in unique_counts]
+    
+    # Add bars for each species type (using log-transformed values)
+    for idx, (_, row) in enumerate(species_count_data.iterrows()):
         stype = row.SPGROUP
-        
-        for j in range(0, count):
-            # Calculate position along spiral
-            # Radius increases gradually as we go around
-            current_radius = initial_radius + radius_growth_rate * current_angle
-            
-            # Convert polar to Cartesian coordinates
-            x = current_radius * np.cos(current_angle)
-            y = current_radius * np.sin(current_angle)
-            
-            _x.append(x)
-            _y.append(y)
-            
-            # Move to next position along spiral
-            current_angle += angular_spacing
-        
+        count = row.COUNT
+        count_log = log_counts[idx]
         species_color = get_species_color(stype)
         text_color = get_text_color_for_background(species_color)
-        series.append(
-            go.Scatter(
-                x=_x, 
-                y=_y, 
-                mode='markers', 
-                marker={
-                    'symbol': 'circle', 
-                    'line': dict(width=0), 
-                    'size': 10, 
-                    'color': species_color
-                }, 
-                name=f'{stype} ({row.COUNT_HUNDREDS})',
-                hovertemplate=f'{stype} ({row.COUNT_HUNDREDS})<extra></extra>',
-                hoverlabel=dict(
-                    bgcolor=species_color,
-                    bordercolor='rgba(0,0,0,0)',
-                    font_size=INLINE_FONTSIZE,
-                    font_family=FONT_FAMILY,
-                    font_color=text_color,
-                ),
+        
+        # Calculate the angle for this bar (center of the angular segment)
+        # Start from top (90 degrees) and go clockwise
+        theta = 90 - (idx * angular_width + angular_width / 2)
+        
+        # Add the radial bar (using log-transformed value)
+        fig.add_trace(go.Barpolar(
+            r=[count_log],
+            theta=[theta],
+            width=[angular_width * 0.9],  # Slightly smaller than full width for spacing
+            marker_color=species_color,
+            marker_line_color=species_color,
+            marker_line_width=0,
+            name=stype,
+            hovertemplate=f'<b>{stype}</b><br>Count: {count:,}<extra></extra>',
+            hoverlabel=dict(
+                bgcolor=species_color,
+                bordercolor='rgba(0,0,0,0)',
+                font_size=INLINE_FONTSIZE,
+                font_family=FONT_FAMILY,
+                font_color=text_color,
             ),
-        )
+        ))
     
-    fig = go.Figure(
-        dict(
-            data=series, 
-            layout=go.Layout(
-                # title={'text': "Species", 'x': 0.5, 'xanchor': 'center'},
-                paper_bgcolor=COLORS['background'],
-                plot_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(
-                    showgrid=False,
-                    zeroline=False, 
-                    showline=False, 
-                    visible=False, 
-                    showticklabels=False,
-                    scaleanchor='y',
-                    scaleratio=1  # Keep aspect ratio 1:1 for circular appearance
-                ),
-                yaxis=dict(
-                    showgrid=False,
-                    zeroline=False, 
-                    showline=False, 
-                    visible=False, 
-                    showticklabels=False
-                ),
-                legend=dict(
-                    title_text="Species count (in hundreds)",
-                    title_font=dict(
-                        family=FONT_FAMILY,
-                        size=INLINE_FONTSIZE,
-                        color=COLORS['text_primary']
-                    ),
-                    font=dict(
-                        family=FONT_FAMILY,
-                        size=INLINE_FONTSIZE - 1,
-                        color=COLORS['text_primary']
-                    )
-                ),
-                font=dict(
+    # Update layout for polar coordinates with log scale (transformed data)
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[log_min, log_max * 1.15],  # Add padding for labels
+                showgrid=False,
+                gridcolor=COLORS['white'],  # Subtle grid
+                gridwidth=0.8,
+                tickmode='array',
+                tickvals=log_unique_counts,  # Grid lines at actual bar values (log scale)
+                ticktext=['' for c in unique_counts],  # Hide tick labels
+                tickfont=dict(
                     family=FONT_FAMILY,
-                    size=INLINE_FONTSIZE,
+                    size=INLINE_FONTSIZE - 2,
                     color=COLORS['text_primary']
                 ),
-            )
-        )
+                tickcolor=COLORS['text_primary'],
+                showline=False,
+                linecolor=COLORS['text_primary'],
+            ),
+            angularaxis=dict(
+                visible=True,
+                rotation=90,  # Start from top
+                direction='clockwise',
+                showgrid=False,
+                showline=False,
+                showticklabels=False,
+            ),
+            bgcolor='rgba(0,0,0,0)',
+        ),
+        paper_bgcolor=COLORS['background'],
+        plot_bgcolor='rgba(0,0,0,0)',
+        showlegend=False,
+        font=dict(
+            family=FONT_FAMILY,
+            size=INLINE_FONTSIZE,
+            color=COLORS['text_primary']
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
     )
+    
+    # Collect annotation data and add connecting lines
+    for idx, (_, row) in enumerate(species_count_data.iterrows()):
+        stype = row.SPGROUP
+        count_log = log_counts[idx]
+        # Calculate angle for annotation (same as bar center)
+        theta = 90 - (idx * angular_width + angular_width / 2)
+        
+        # Add connecting line from end of bar to label (dashed line)
+        line_radius_log = count_log * 1.11
+        if row.SPGROUP in ['Amphibians', 'Reptiles']:
+            line_radius_log = count_log * 1.26
+        
+        fig.add_trace(go.Scatterpolar(
+            r=[count_log, line_radius_log],
+            theta=[theta, theta],
+            mode='lines',
+            line=dict(
+                color=COLORS['white'],
+                width=1,
+                dash='dash'
+            ),
+            showlegend=False,
+            hoverinfo='skip',
+        ))
+        
+        # Add a small white dot at the end of the bar
+        fig.add_trace(go.Scatterpolar(
+            r=[count_log],
+            theta=[theta],
+            mode='markers',
+            marker=dict(
+                size=4,
+                color=COLORS['white'],
+                symbol='circle',
+                line=dict(width=0)
+            ),
+            showlegend=False,
+            hoverinfo='skip',
+        ))
+        
+        # Add text annotation with species name and count
+        annotation_text = f"{row.SPGROUP}: {row.COUNT}"
+        annotation_radius_log = count_log * 1.16
+        if row.SPGROUP in ['Amphibians', 'Reptiles']:
+            annotation_radius_log = count_log * 1.32
+        fig.add_trace(go.Scatterpolar(
+            r=[annotation_radius_log],
+            theta=[theta],
+            mode='text',
+            text=annotation_text,
+            textfont=dict(
+                family=FONT_FAMILY,
+                size=INLINE_FONTSIZE,
+                color=COLORS['text_primary']
+            ),
+            showlegend=False,
+            hoverinfo='skip',
+        ))
     
     return fig
 
@@ -916,6 +847,7 @@ def create_species_per_country_scatter(species_per_country, species_count_data):
     species_types = species_count_data.SPGROUP.unique()
     species_per_country['COUNTRY'] = species_per_country.apply(lambda x: COUNTRY_CODES_NAMES[x.COUNTRY_CODE], axis=1)
     # Create y-position mapping for each species type
+
     y_positions = {species: i for i, species in enumerate(species_types)}
     
     # # Get global min/max for consistent color scaling
@@ -1086,7 +1018,7 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
             bgcolor=base_color,
             bordercolor='rgba(0,0,0,0)',
             font_size=INLINE_FONTSIZE,
-            font_family=FONT_FAMILY,
+        font_family=FONT_FAMILY,
             font_color=text_color,
         ),
     )
@@ -1125,15 +1057,16 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
             size=INLINE_FONTSIZE,
             color=COLORS['text_primary']
         ),
-        margin=dict(l=0, r=0, t=50, b=0),
+        margin=dict(l=0, r=0, t=0, b=0),
         coloraxis_colorbar=dict(
             title=dict(
                 text="Species Count",
                 font=dict(family=FONT_FAMILY, size=INLINE_FONTSIZE, color=COLORS['text_primary'])
             ),
             bgcolor=COLORS['background'],
-            bordercolor=COLORS['details'],
-            borderwidth=0
+            outlinecolor=COLORS['white'],
+            outlinewidth=1.3,
+            x=.87 # Horizontal position (1.0 = right edge of plot, higher values move it farther right)
         )
     )
     

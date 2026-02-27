@@ -159,7 +159,7 @@ app.index_string = '''
                 display: flex;
                 align-items: center;
                 gap: 3rem;
-                margin: 4rem 0;
+                margin: 0rem 0;
             }
             
             .plot-container.reverse {
@@ -355,7 +355,7 @@ app.index_string = '''
                 z-index: 2;
                 max-width: 1400px;
                 margin: 0 auto;
-                padding: 2rem 2rem;  /* ADJUST THIS: Reduced from 4rem vertical. Increase for more space, decrease for less */
+                padding: 1rem 1rem;  /* ADJUST THIS: Reduced from 4rem vertical. Increase for more space, decrease for less */
             }
             
             
@@ -390,7 +390,7 @@ app.index_string = '''
             
             .story-point p {
                 font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
-                font-size: 1.5rem;  /* ADJUST THIS: Increased from 1.3rem for Pompiere. Change to adjust story text size */
+                font-size: 1.2rem;
                 line-height: 1.8;
                 color: ''' + COLORS['text_primary'] + ''';
                 margin: 0;
@@ -426,6 +426,16 @@ app.index_string = '''
                 font-weight: 600;
             }
             
+            /* Hero section */
+            .hero-section {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                z-index: 2;
+            }
+            
             /* Main title */
             .main-title {
                 position: relative;
@@ -434,7 +444,7 @@ app.index_string = '''
                 font-family: ''' + FONT_FAMILY_STORY + ''', sans-serif;
                 font-size: 3.5rem;
                 font-weight: 600;
-                margin: 4rem auto 8rem auto;
+                margin: 0 auto;
                 max-width: 800px;
                 color: ''' + COLORS['text_primary'] + ''';
             }
@@ -449,9 +459,33 @@ app.index_string = '''
             }
             
             .plot-right {
-                flex: 0 0 80%;  /* Increased from 70% to make centered plot wider */
-                max-width: 1200px;  /* Added max-width to prevent it from getting too wide */
+                flex: 0 0 80%;
+                max-width: 1200px;
                 position: relative;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            /* Center Plotly plots within their containers */
+            .plot-right .js-plotly-plot,
+            .plot-wrapper .js-plotly-plot {
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                width: 100% !important;
+            }
+            
+            .plot-right .plot-container.plotly,
+            .plot-wrapper .plot-container.plotly {
+                margin: 0 auto !important;
+                width: fit-content !important;
+            }
+            
+            /* Center the SVG container inside Plotly plots */
+            .plot-right .svg-container,
+            .plot-wrapper .svg-container {
+                margin: 0 auto !important;
             }
             
             /* Toggleable graph annotation */
@@ -480,6 +514,7 @@ app.index_string = '''
                 font-size: 1.2rem;
                 color: ''' + COLORS['text_primary'] + ''';
                 z-index: 11;
+                flex-shrink: 0;
             }
             
             .toggle-annotation-button:hover {
@@ -490,9 +525,8 @@ app.index_string = '''
             
             .toggle-annotation-content {
                 position: absolute;
-                right: 50px;
+                left: 50px;
                 top: 0;
-                background: ''' + COLORS['white'] + ''';
                 background: rgba(252, 255, 247, 0.95);
                 padding: 0.75rem 1rem;
                 border-radius: 8px;
@@ -500,16 +534,17 @@ app.index_string = '''
                 font-family: ''' + FONT_FAMILY + ''', monospace;
                 font-size: 0.85rem;
                 color: ''' + COLORS['text_primary'] + ''';
-                max-width: 320px;
-                width: 320px;
+                max-width: 250px;
+                width: 250px;
                 line-height: 1.4;
-                border-right: 3px solid ''' + COLORS['details'] + ''';
+                border-left: 3px solid ''' + COLORS['details'] + ''';
                 backdrop-filter: blur(4px);
                 opacity: 0;
                 visibility: hidden;
                 transition: all 0.3s ease;
-                transform: translateX(10px);
+                transform: translateX(-10px);
                 white-space: normal;
+                word-wrap: break-word;
             }
             
             .toggle-annotation-content.visible {
@@ -562,15 +597,17 @@ app.index_string = '''
 # ============================================================================
 
 app.layout = html.Div([
-    # Story content wrapper
+    # Hero Section (full viewport height)
     html.Div([
-        
-        # Main Title
         html.H1([
             "Exploring the ",
             html.Span("Natura 2000", className="natura-text"),
             " network"
         ], className="main-title center"),
+    ], className="hero-section"),
+    
+    # Story content wrapper
+    html.Div([
         
         # Story Point 1 - positioned left
         html.Div([
@@ -578,7 +615,7 @@ app.layout = html.Div([
                 html.Span("Natura 2000", className="natura-text"),
                 " is the largest network of protected areas in the world."
             ])
-        ], className="story-point left"),
+        ], className="story-point left", id="story-point-1"),
         
         # Story Point 2 - positioned right
         html.Div([
@@ -591,7 +628,7 @@ app.layout = html.Div([
                 html.Strong("2017"),
                 "."
             ])
-        ], className="story-point right"),
+        ], className="story-point right", id="story-point-2"),
         
         # Story Point 3 - positioned left
         html.Div([
@@ -604,7 +641,7 @@ app.layout = html.Div([
                 html.Strong("280 thousand"),
                 " protected sites."
             ])
-        ], className="story-point left"),
+        ], className="story-point left", id="story-point-3"),
         
         # Scatter Plot with Toggleable Annotation
         html.Div([
@@ -641,7 +678,7 @@ app.layout = html.Div([
                 html.Strong("27"),
                 " countries, in different countries."
             ])
-        ], className="story-point left")
+        ], className="story-point left", id="story-point-4")
     ], className="story-content"),
     
     # Sankey Diagram with Toggleable Annotation
@@ -678,7 +715,7 @@ app.layout = html.Div([
             html.P([
                 "Spain notably has the most protected area..."
             ])
-        ], className="story-point right")
+        ], className="story-point right", id="story-point-5")
     ], className="story-content"),
     
     # Story Point: For almost every category
@@ -687,7 +724,7 @@ app.layout = html.Div([
             html.P([
                 "...for almost every category of habitat, which we can observe when looking at the distribution of habitat coverage over countries."
             ])
-        ], className="story-point left")
+        ], className="story-point left", id="story-point-6")
     ], className="story-content"),
     
     # Choropleth Grid Section (centered)
@@ -713,7 +750,7 @@ app.layout = html.Div([
                     html.Strong("35 thousand"),
                     " threatened species, such as birds, plants, and more."
                 ])
-            ], className="story-point left"),
+            ], className="story-point left", id="story-point-7"),
             html.Div([
                 dcc.Graph(
                     id='species-pictogram',
@@ -731,7 +768,7 @@ app.layout = html.Div([
             html.P([
                 "These species spread across Europe, though the largest proportion lives in the Mediterranean and Atlantic regions."
             ])
-        ], className="story-point right")
+        ], className="story-point right", id="story-point-8")
     ], className="story-content"),
     
     # Story Point: Protected sites with varying richness
@@ -741,7 +778,7 @@ app.layout = html.Div([
                 html.Span("Natura 2000", className="natura-text"),
                 " comprises protected sites with varying richness in terms of species."
             ])
-        ], className="story-point left")
+        ], className="story-point left", id="story-point-9")
     ], className="story-content"),
     
     # Species Scatter Map Section (only if data is available)
@@ -749,7 +786,7 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             html.Div([
-                html.Label("Select Species Type:", style={'fontSize': '1rem', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
+                html.Label("Select Species Type:", style={'fontSize': '1rem', 'font': 'Noto Sans Mono', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
                 html.Div([
                     dcc.Dropdown(
                         id='species-type-dropdown',
@@ -901,5 +938,8 @@ def update_species_scatter_map(selected_species_type):
     return fig
 
 
+# Expose server for Gunicorn (production)
+server = app.server
+
 if __name__ == '__main__':
-    app.run(debug=APP_DEBUG, port=APP_PORT)
+    app.run(debug=APP_DEBUG, port=APP_PORT, host='0.0.0.0')

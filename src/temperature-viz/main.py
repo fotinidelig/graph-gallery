@@ -23,6 +23,7 @@ def _():
     from pathlib import Path
     import marimo as mo
     return (
+        FuncAnimation,
         LinearSegmentedColormap,
         Path,
         Point,
@@ -31,6 +32,7 @@ def _():
         fig_text,
         gpd,
         load_google_font,
+        mo,
         np,
         pd,
         plt,
@@ -504,9 +506,13 @@ def _(CURRENT_DIR, compute_monthly_extremes):
                                   var_name="tn")
     maximum_extremes = maximum_extremes.sort_values('date')
     minimum_extremes = minimum_extremes.sort_values('date')
-
-    minimum_extremes.columns
     return maximum_extremes, minimum_extremes
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### Line plot with annotations""")
+    return
 
 
 @app.cell
@@ -544,7 +550,7 @@ def _(
         too_hot_color = '#cc6633'#'#cc6633'
         too_cold_color = '#29a6a6'#'#33cccc'
         tickcolor = '#333333'
-    
+
         ax.set_facecolor(background)
         fig.set_facecolor(background)
 
@@ -700,7 +706,7 @@ def _(
         ax_text(x=pd.Timestamp('2011-05-01'), y=48, size=7, va='center', color=tickcolor,
                s='Average daily temperature (<highest> and <lowest> daily)',
                highlight_textprops=[{'color': maxim_color}, {'color': minim_color}])
-    
+
         fig_text(fig=fig, x=.5, y=.94, s='Is Greece already experiencing global warming?', 
                  ha='center', size=17)
 
@@ -712,6 +718,868 @@ def _(
         plt.show()
 
     plot_ranges()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### What if we go polar?""")
+    return
+
+
+@app.cell
+def _(
+    CURRENT_DIR,
+    fig_text,
+    load_google_font,
+    maxim_data,
+    maxim_lower_b,
+    maxim_upper_b,
+    maximum_extremes,
+    minim_data,
+    minim_lower_b,
+    minim_upper_b,
+    minimum_extremes,
+    np,
+    pd,
+    plt,
+    set_default_font,
+):
+    def plot_polar():
+        # --- Step 1: Create polar figure ---
+        fig, ax = plt.subplots(
+            figsize=(10, 10), dpi=150, layout="tight",
+            subplot_kw={'projection': 'polar'},
+        )
+        font = load_google_font("Space Mono", weight="regular", italic=False)
+        bold_font = load_google_font("Space Mono", weight="bold", italic=False)
+        set_default_font(font)
+
+        # Colors (same as Cartesian version)
+        background = '#f0f0f0'
+        maxim_color = '#98231B'
+        minim_color = '#008080'
+        too_hot_color = '#cc6633'
+        too_cold_color = '#29a6a6'
+        tickcolor = '#333333'
+
+        ax.set_facecolor(background)
+        fig.set_facecolor(background)
+
+        # --- Step 2: Helper — convert datetime to x and to angle ---
+        datetimes = list(minim_data.time.values)
+        datetimes.append(pd.Timestamp('2025-01-01')) # two additional datetimes to create space between 2011 and 2025
+        datetimes.append(pd.Timestamp('2025-02-01'))
+
+        global_x = np.arange(0, len(minim_data.time.values)+2)
+        global_x_min = min(global_x)
+        global_x_max = max(global_x)
+
+        datetime_to_x = dict(zip(minim_data.time.values, global_x))
+
+        def x_to_theta(x):
+            """Map datetime values linearly to [0, 2π]."""
+            return 2 * np.pi * (x - global_x_min) / (global_x_max - global_x_min)
+
+        # --- Step 3: Radius offset (so negative temps become positive radii) ---
+        r_offset = 15  # 0°C sits at radius 15; tune to taste
+
+
+        # --- Step 4: Plot the temperature lines ---
+        x_min = np.arange(0, len(minim_data.time.values))
+        x_max = np.arange(0, len(maxim_data.time.values))
+
+        theta_min_line = x_to_theta(x_min)
+        theta_max_line = x_to_theta(x_max)
+
+
+        ax.plot(theta_min_line, minim_data.values + r_offset,
+                color=minim_color, alpha=0.6, linewidth=1.5, zorder=1)
+
+        ax.plot(theta_max_line, maxim_data.values + r_offset,
+                color=maxim_color, alpha=0.6, linewidth=1.5, zorder=3)
+
+        # --- Step 5: Fill-between bands ---
+        x_minim_upper_b = np.arange(0, len(minim_upper_b.time.values))
+        theta_band_min = x_to_theta(x_minim_upper_b)
+        ax.fill_between(
+            theta_band_min,
+            minim_lower_b.values + r_offset,
+            minim_upper_b.values + r_offset,
+            color=minim_color, alpha=0.1, linewidth=0, zorder=0,
+        )
+
+        x_maxim_upper_b = np.arange(0, len(maxim_upper_b.time.values))
+        theta_band_max = x_to_theta(x_maxim_upper_b)
+        ax.fill_between(
+            theta_band_max,
+            maxim_lower_b.values + r_offset,
+            maxim_upper_b.values + r_offset,
+            color=maxim_color, alpha=0.2, linewidth=0, zorder=2,
+        )
+
+        # --- Step 6: Scatter — yearly extremes ---
+        years = range(2011, 2025)
+        yearly_max = maximum_extremes.loc[
+            maximum_extremes.groupby('year')['extreme_temperature'].idxmax()
+        ]
+
+        yearly_min = minimum_extremes.loc[
+            minimum_extremes.groupby('year')['extreme_temperature'].idxmin()
+        ]
+
+        extremes_date = np.array(
+            [pd.Timestamp(f'{y}-07-01') for y in years], dtype='datetime64[ns]'
+        )
+
+        x_extremes = [datetime_to_x.get(date) for date in extremes_date]
+        theta_extremes = x_to_theta(x_extremes)
+
+        ax.scatter(theta_extremes,
+                   yearly_max['extreme_temperature'].values + r_offset,
+                   marker='o', color=too_hot_color, alpha=0.8, s=30, zorder=5)
+        ax.scatter(theta_extremes,
+                   yearly_min['extreme_temperature'].values + r_offset,
+                   marker='o', color=too_cold_color, alpha=0.8, s=30, zorder=5)
+
+        # --- Step 7: Reference circles at 0°C and 30°C ---
+        full_theta = np.linspace(0, 2 * np.pi, 300)
+        ax.plot(full_theta, np.full_like(full_theta, 0 + r_offset),
+                color=too_cold_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+        ax.plot(full_theta, np.full_like(full_theta, 30 + r_offset),
+                color=too_hot_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+
+        # --- Step 8: Angular tick labels (years) ---
+        year_ticks = [pd.Timestamp(f'{y}-01-01') for y in range(2011, 2025)]
+        # year_ticks.append(pd.Timestamp('2025-02-01')) # push 2025 tick slightly before in order to avoid overlap with 2011
+
+        x_ticks = [datetime_to_x.get(date) for date in year_ticks]
+        year_thetas = x_to_theta(
+            np.array(x_ticks)
+        )
+        ax.set_xticks(year_thetas)
+        ax.set_xticklabels([str(y) for y in range(2011, 2025)],
+                           size=8, color=tickcolor)
+
+        # --- Step 9: Radial tick labels (temperatures) ---
+        temp_labels = [-10, 0, 10, 20, 30, 40]
+        temp_ticks = [-7, 0, 10, 20, 30, 40] # push -10 to the -7 position for better visibility
+        ax.set_yticks([t + r_offset for t in temp_ticks])
+        ax.set_yticklabels([f'{t}°C' for t in temp_labels],
+                           size=7, color=tickcolor)
+        ax.set_rlabel_position(0)  # place radial labels on the left
+
+        # Radial limits
+        ax.set_ylim(0, 46 + r_offset)
+
+        # Start angle: put Jan 2011 at the top (90° in polar = top)
+        # ax.set_theta_offset(np.pi / 2)
+        ax.set_theta_direction(-1)  # clockwise
+
+        # Light grid styling
+        ax.grid(True, color='grey', alpha=0.15, linewidth=0.5)
+        ax.spines['polar'].set_visible(False)
+
+        # --- Title ---
+        fig_text(fig=fig, x=0.5, y=0.97,
+                 s='Is Greece already experiencing global warming?',
+                 ha='center', size=15)
+            # --- Legend ---
+        fig_text(fig=fig, x=0.5, y=0.02,
+                 s='o Temperature extremes per year (<maximum> and <minimum>)',
+                 ha='center', size=8, color=tickcolor,
+                 highlight_textprops=[{'color': too_hot_color}, {'color': too_cold_color}])
+        fig_text(fig=fig, x=0.5, y=0.04,
+                 s='— Average daily temperature (<highest> and <lowest> daily)',
+                 ha='center', size=8, color=tickcolor,
+                 highlight_textprops=[{'color': maxim_color}, {'color': minim_color}])
+
+        plt.savefig(CURRENT_DIR / 'greece_temperatures_polar.png')
+        plt.show()
+
+    plot_polar()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### Animated version of polar line plot""")
+    return
+
+
+@app.cell
+def _(
+    CURRENT_DIR,
+    FuncAnimation,
+    load_google_font,
+    maxim_data,
+    maxim_lower_b,
+    maxim_upper_b,
+    maximum_extremes,
+    minim_data,
+    minim_lower_b,
+    minim_upper_b,
+    minimum_extremes,
+    np,
+    pd,
+    plt,
+    set_default_font,
+):
+    def animate_expanding_time():
+        """Animation 1: Data grows clockwise month by month, like a flower blooming."""
+        font = load_google_font("Space Mono", weight="regular", italic=False)
+        set_default_font(font)
+
+        # Colors
+        background = '#f0f0f0'
+        maxim_color = '#98231B'
+        minim_color = '#008080'
+        too_hot_color = '#cc6633'
+        too_cold_color = '#29a6a6'
+        tickcolor = '#333333'
+
+        # Precompute theta mapping (same as static version)
+        total_months = len(minim_data.time.values)
+        global_x = np.arange(0, total_months + 2)
+        global_x_min = min(global_x)
+        global_x_max = max(global_x)
+        datetime_to_x = dict(zip(minim_data.time.values, global_x))
+
+        def x_to_theta(x):
+            return 2 * np.pi * (x - global_x_min) / (global_x_max - global_x_min)
+
+        r_offset = 15
+
+        # Precompute all theta arrays
+        theta_min_line = x_to_theta(np.arange(len(minim_data.time.values)))
+        theta_max_line = x_to_theta(np.arange(len(maxim_data.time.values)))
+        theta_band_min = x_to_theta(np.arange(len(minim_upper_b.time.values)))
+        theta_band_max = x_to_theta(np.arange(len(maxim_upper_b.time.values)))
+
+        # Yearly extremes
+        years = range(2011, 2025)
+        yearly_max_df = maximum_extremes.loc[
+            maximum_extremes.groupby('year')['extreme_temperature'].idxmax()
+        ]
+        yearly_min_df = minimum_extremes.loc[
+            minimum_extremes.groupby('year')['extreme_temperature'].idxmin()
+        ]
+        extremes_date = np.array(
+            [pd.Timestamp(f'{y}-07-01') for y in years], dtype='datetime64[ns]'
+        )
+        x_extremes = np.array([datetime_to_x.get(d) for d in extremes_date])
+        theta_extremes = x_to_theta(x_extremes)
+
+        # Year tick positions
+        year_ticks = [pd.Timestamp(f'{y}-01-01') for y in range(2011, 2025)]
+        x_ticks = [datetime_to_x.get(d) for d in year_ticks]
+        year_thetas = x_to_theta(np.array(x_ticks))
+
+        # Frame indices: reveal 2 months per frame
+        step = 2
+        frame_months = list(range(step, total_months + 1, step))
+        if frame_months[-1] != total_months:
+            frame_months.append(total_months)
+
+        # Create figure
+        fig, ax = plt.subplots(
+            figsize=(10, 10), dpi=100,
+            subplot_kw={'projection': 'polar'},
+        )
+        fig.set_facecolor(background)
+        fig.suptitle(
+            'Is Greece already experiencing global warming?',
+            fontsize=15, y=0.97,
+        )
+
+        def update(frame_idx):
+            ax.clear()
+            ax.set_facecolor(background)
+            n = frame_months[frame_idx]
+
+            # Reference circles
+            full_theta = np.linspace(0, 2 * np.pi, 300)
+            ax.plot(full_theta, np.full_like(full_theta, 0 + r_offset),
+                    color=too_cold_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+            ax.plot(full_theta, np.full_like(full_theta, 30 + r_offset),
+                    color=too_hot_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+
+            # Temperature lines up to month n
+            ax.plot(theta_min_line[:n], minim_data.values[:n] + r_offset,
+                    color=minim_color, alpha=0.6, linewidth=1.5, zorder=1)
+            ax.plot(theta_max_line[:n], maxim_data.values[:n] + r_offset,
+                    color=maxim_color, alpha=0.6, linewidth=1.5, zorder=3)
+
+            # Fill bands up to month n
+            nb_min = min(n, len(theta_band_min))
+            ax.fill_between(
+                theta_band_min[:nb_min],
+                minim_lower_b.values[:nb_min] + r_offset,
+                minim_upper_b.values[:nb_min] + r_offset,
+                color=minim_color, alpha=0.1, linewidth=0, zorder=0,
+            )
+            nb_max = min(n, len(theta_band_max))
+            ax.fill_between(
+                theta_band_max[:nb_max],
+                maxim_lower_b.values[:nb_max] + r_offset,
+                maxim_upper_b.values[:nb_max] + r_offset,
+                color=maxim_color, alpha=0.2, linewidth=0, zorder=2,
+            )
+
+            # Scatter for completed years only
+            completed_years = min(n // 12, 14)
+            if completed_years > 0:
+                ax.scatter(
+                    theta_extremes[:completed_years],
+                    yearly_max_df['extreme_temperature'].values[:completed_years] + r_offset,
+                    marker='o', color=too_hot_color, alpha=0.8, s=30, zorder=5,
+                )
+                ax.scatter(
+                    theta_extremes[:completed_years],
+                    yearly_min_df['extreme_temperature'].values[:completed_years] + r_offset,
+                    marker='o', color=too_cold_color, alpha=0.8, s=30, zorder=5,
+                )
+
+            # Axis formatting
+            ax.set_xticks(year_thetas)
+            ax.set_xticklabels([str(y) for y in range(2011, 2025)],
+                               size=8, color=tickcolor)
+            temp_labels = [-10, 0, 10, 20, 30, 40]
+            temp_ticks = [-7, 0, 10, 20, 30, 40]
+            ax.set_yticks([t + r_offset for t in temp_ticks])
+            ax.set_yticklabels([f'{t}°C' for t in temp_labels],
+                               size=7, color=tickcolor)
+            ax.set_rlabel_position(0)
+            ax.set_ylim(0, 46 + r_offset)
+            ax.set_theta_direction(-1)
+            ax.grid(True, color='grey', alpha=0.15, linewidth=0.5)
+            ax.spines['polar'].set_visible(False)
+            return []
+
+        anim = FuncAnimation(
+            fig, update, frames=len(frame_months), interval=100, blit=False,
+        )
+        anim.save(
+            CURRENT_DIR / 'polar_anim_expanding_time.gif',
+            writer='pillow', fps=10, dpi=100,
+        )
+        plt.close(fig)
+        print("Saved: polar_anim_expanding_time.gif")
+
+    animate_expanding_time()
+    return
+
+
+@app.cell
+def _(
+    CURRENT_DIR,
+    FuncAnimation,
+    load_google_font,
+    maxim_data,
+    maxim_lower_b,
+    maxim_upper_b,
+    maximum_extremes,
+    minim_data,
+    minim_lower_b,
+    minim_upper_b,
+    minimum_extremes,
+    np,
+    pd,
+    plt,
+    set_default_font,
+):
+    def animate_expanding_ylim():
+        """Animation 2: Radial limit expands outward, revealing the full chart."""
+        font = load_google_font("Space Mono", weight="regular", italic=False)
+        set_default_font(font)
+
+        # Colors
+        background = '#f0f0f0'
+        maxim_color = '#98231B'
+        minim_color = '#008080'
+        too_hot_color = '#cc6633'
+        too_cold_color = '#29a6a6'
+        tickcolor = '#333333'
+
+        # Theta mapping
+        total_months = len(minim_data.time.values)
+        global_x = np.arange(0, total_months + 2)
+        global_x_min = min(global_x)
+        global_x_max = max(global_x)
+        datetime_to_x = dict(zip(minim_data.time.values, global_x))
+
+        def x_to_theta(x):
+            return 2 * np.pi * (x - global_x_min) / (global_x_max - global_x_min)
+
+        r_offset = 15
+
+        theta_min_line = x_to_theta(np.arange(len(minim_data.time.values)))
+        theta_max_line = x_to_theta(np.arange(len(maxim_data.time.values)))
+        theta_band_min = x_to_theta(np.arange(len(minim_upper_b.time.values)))
+        theta_band_max = x_to_theta(np.arange(len(maxim_upper_b.time.values)))
+
+        # Yearly extremes
+        years = range(2011, 2025)
+        yearly_max_df = maximum_extremes.loc[
+            maximum_extremes.groupby('year')['extreme_temperature'].idxmax()
+        ]
+        yearly_min_df = minimum_extremes.loc[
+            minimum_extremes.groupby('year')['extreme_temperature'].idxmin()
+        ]
+        extremes_date = np.array(
+            [pd.Timestamp(f'{y}-07-01') for y in years], dtype='datetime64[ns]'
+        )
+        x_extremes = np.array([datetime_to_x.get(d) for d in extremes_date])
+        theta_extremes = x_to_theta(x_extremes)
+
+        # Year tick positions
+        year_ticks = [pd.Timestamp(f'{y}-01-01') for y in range(2011, 2025)]
+        x_ticks = [datetime_to_x.get(d) for d in year_ticks]
+        year_thetas = x_to_theta(np.array(x_ticks))
+
+        # ylim expansion with ease-out curve
+        final_ylim = 46 + r_offset  # = 61
+        start_ylim = r_offset - 5   # = 10 (shows almost nothing)
+        n_frames = 60
+        t = np.linspace(0, 1, n_frames)
+        eased_t = 1 - (1 - t) ** 2  # quadratic ease-out for smooth deceleration
+        ylim_values = start_ylim + (final_ylim - start_ylim) * eased_t
+
+        # Create figure
+        fig, ax = plt.subplots(
+            figsize=(10, 10), dpi=100,
+            subplot_kw={'projection': 'polar'},
+        )
+        fig.set_facecolor(background)
+        fig.suptitle(
+            'Is Greece already experiencing global warming?',
+            fontsize=15, y=0.97,
+        )
+
+        def update(frame_idx):
+            ax.clear()
+            ax.set_facecolor(background)
+            current_ylim = ylim_values[frame_idx]
+
+            # Reference circles
+            full_theta = np.linspace(0, 2 * np.pi, 300)
+            ax.plot(full_theta, np.full_like(full_theta, 0 + r_offset),
+                    color=too_cold_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+            ax.plot(full_theta, np.full_like(full_theta, 30 + r_offset),
+                    color=too_hot_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+
+            # All data plotted (clipped by ylim)
+            ax.plot(theta_min_line, minim_data.values + r_offset,
+                    color=minim_color, alpha=0.6, linewidth=1.5, zorder=1)
+            ax.plot(theta_max_line, maxim_data.values + r_offset,
+                    color=maxim_color, alpha=0.6, linewidth=1.5, zorder=3)
+
+            ax.fill_between(
+                theta_band_min,
+                minim_lower_b.values + r_offset,
+                minim_upper_b.values + r_offset,
+                color=minim_color, alpha=0.1, linewidth=0, zorder=0,
+            )
+            ax.fill_between(
+                theta_band_max,
+                maxim_lower_b.values + r_offset,
+                maxim_upper_b.values + r_offset,
+                color=maxim_color, alpha=0.2, linewidth=0, zorder=2,
+            )
+
+            ax.scatter(
+                theta_extremes,
+                yearly_max_df['extreme_temperature'].values + r_offset,
+                marker='o', color=too_hot_color, alpha=0.8, s=30, zorder=5,
+            )
+            ax.scatter(
+                theta_extremes,
+                yearly_min_df['extreme_temperature'].values + r_offset,
+                marker='o', color=too_cold_color, alpha=0.8, s=30, zorder=5,
+            )
+
+            # Axis formatting
+            ax.set_xticks(year_thetas)
+            ax.set_xticklabels([str(y) for y in range(2011, 2025)],
+                               size=8, color=tickcolor)
+            temp_labels = [-10, 0, 10, 20, 30, 40]
+            temp_ticks = [-7, 0, 10, 20, 30, 40]
+            ax.set_yticks([t + r_offset for t in temp_ticks])
+            ax.set_yticklabels([f'{t}°C' for t in temp_labels],
+                               size=7, color=tickcolor)
+            ax.set_rlabel_position(0)
+            ax.set_ylim(0, current_ylim)  # <-- this is what animates
+            ax.set_theta_direction(-1)
+            ax.grid(True, color='grey', alpha=0.15, linewidth=0.5)
+            ax.spines['polar'].set_visible(False)
+            return []
+
+        anim = FuncAnimation(
+            fig, update, frames=n_frames, interval=80, blit=False,
+        )
+        anim.save(
+            CURRENT_DIR / 'polar_anim_expanding_ylim.gif',
+            writer='pillow', fps=12, dpi=100,
+        )
+        plt.close(fig)
+        print("Saved: polar_anim_expanding_ylim.gif")
+
+    animate_expanding_ylim()
+    return
+
+
+@app.cell
+def _(
+    CURRENT_DIR,
+    FuncAnimation,
+    load_google_font,
+    maxim_data,
+    maxim_lower_b,
+    maxim_upper_b,
+    maximum_extremes,
+    minim_data,
+    minim_lower_b,
+    minim_upper_b,
+    minimum_extremes,
+    np,
+    pd,
+    plt,
+    set_default_font,
+):
+    def animate_pulsing_scatter():
+        """Animation 3: Extreme value markers pulse between two sizes."""
+        font = load_google_font("Space Mono", weight="regular", italic=False)
+        set_default_font(font)
+
+        # Colors
+        background = '#f0f0f0'
+        maxim_color = '#98231B'
+        minim_color = '#008080'
+        too_hot_color = '#cc6633'
+        too_cold_color = '#29a6a6'
+        tickcolor = '#333333'
+
+        # Theta mapping
+        total_months = len(minim_data.time.values)
+        global_x = np.arange(0, total_months + 2)
+        global_x_min = min(global_x)
+        global_x_max = max(global_x)
+        datetime_to_x = dict(zip(minim_data.time.values, global_x))
+
+        def x_to_theta(x):
+            return 2 * np.pi * (x - global_x_min) / (global_x_max - global_x_min)
+
+        r_offset = 15
+
+        theta_min_line = x_to_theta(np.arange(len(minim_data.time.values)))
+        theta_max_line = x_to_theta(np.arange(len(maxim_data.time.values)))
+        theta_band_min = x_to_theta(np.arange(len(minim_upper_b.time.values)))
+        theta_band_max = x_to_theta(np.arange(len(maxim_upper_b.time.values)))
+
+        # Yearly extremes
+        years = range(2011, 2025)
+        yearly_max_df = maximum_extremes.loc[
+            maximum_extremes.groupby('year')['extreme_temperature'].idxmax()
+        ]
+        yearly_min_df = minimum_extremes.loc[
+            minimum_extremes.groupby('year')['extreme_temperature'].idxmin()
+        ]
+        extremes_date = np.array(
+            [pd.Timestamp(f'{y}-07-01') for y in years], dtype='datetime64[ns]'
+        )
+        x_extremes = np.array([datetime_to_x.get(d) for d in extremes_date])
+        theta_extremes = x_to_theta(x_extremes)
+
+        # Year tick positions
+        year_ticks = [pd.Timestamp(f'{y}-01-01') for y in range(2011, 2025)]
+        x_ticks = [datetime_to_x.get(d) for d in year_ticks]
+        year_thetas = x_to_theta(np.array(x_ticks))
+
+        # Create figure with full static plot (drawn once)
+        fig, ax = plt.subplots(
+            figsize=(10, 10), dpi=100,
+            subplot_kw={'projection': 'polar'},
+        )
+        fig.set_facecolor(background)
+        ax.set_facecolor(background)
+        fig.suptitle(
+            'Is Greece already experiencing global warming?',
+            fontsize=15, y=0.97,
+        )
+
+        # Reference circles
+        full_theta = np.linspace(0, 2 * np.pi, 300)
+        ax.plot(full_theta, np.full_like(full_theta, 0 + r_offset),
+                color=too_cold_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+        ax.plot(full_theta, np.full_like(full_theta, 30 + r_offset),
+                color=too_hot_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+
+        # Lines and bands (static)
+        ax.plot(theta_min_line, minim_data.values + r_offset,
+                color=minim_color, alpha=0.6, linewidth=1.5, zorder=1)
+        ax.plot(theta_max_line, maxim_data.values + r_offset,
+                color=maxim_color, alpha=0.6, linewidth=1.5, zorder=3)
+        ax.fill_between(
+            theta_band_min,
+            minim_lower_b.values + r_offset,
+            minim_upper_b.values + r_offset,
+            color=minim_color, alpha=0.1, linewidth=0, zorder=0,
+        )
+        ax.fill_between(
+            theta_band_max,
+            maxim_lower_b.values + r_offset,
+            maxim_upper_b.values + r_offset,
+            color=maxim_color, alpha=0.2, linewidth=0, zorder=2,
+        )
+
+        # Scatter — keep references for animation
+        scat_hot = ax.scatter(
+            theta_extremes,
+            yearly_max_df['extreme_temperature'].values + r_offset,
+            marker='o', color=too_hot_color, alpha=0.8, s=30, zorder=5,
+        )
+        scat_cold = ax.scatter(
+            theta_extremes,
+            yearly_min_df['extreme_temperature'].values + r_offset,
+            marker='o', color=too_cold_color, alpha=0.8, s=30, zorder=5,
+        )
+
+        # Axis formatting (static)
+        ax.set_xticks(year_thetas)
+        ax.set_xticklabels([str(y) for y in range(2011, 2025)],
+                           size=8, color=tickcolor)
+        temp_labels = [-10, 0, 10, 20, 30, 40]
+        temp_ticks_vals = [-7, 0, 10, 20, 30, 40]
+        ax.set_yticks([tv + r_offset for tv in temp_ticks_vals])
+        ax.set_yticklabels([f'{tl}°C' for tl in temp_labels],
+                           size=7, color=tickcolor)
+        ax.set_rlabel_position(0)
+        ax.set_ylim(0, 46 + r_offset)
+        ax.set_theta_direction(-1)
+        ax.grid(True, color='grey', alpha=0.15, linewidth=0.5)
+        ax.spines['polar'].set_visible(False)
+
+        # Pulsing parameters
+        s_min, s_max = 15, 80
+        n_points = len(theta_extremes)
+        n_frames = 60  # 3 full cycles at 20 frames per cycle
+
+        def update(frame_idx):
+            # Sine wave oscillation: period = 20 frames
+            sine_val = np.sin(2 * np.pi * frame_idx / 20)
+            s = s_min + (s_max - s_min) * (sine_val + 1) / 2
+            scat_hot.set_sizes(np.full(n_points, s))
+            scat_cold.set_sizes(np.full(n_points, s))
+            return [scat_hot, scat_cold]
+
+        anim = FuncAnimation(
+            fig, update, frames=n_frames, interval=50, blit=False,
+        )
+        anim.save(
+            CURRENT_DIR / 'polar_anim_pulsing_scatter.gif',
+            writer='pillow', fps=20, dpi=100,
+        )
+        plt.close(fig)
+        print("Saved: polar_anim_pulsing_scatter.gif")
+
+    animate_pulsing_scatter()
+    return
+
+
+@app.cell
+def _(
+    CURRENT_DIR,
+    FuncAnimation,
+    load_google_font,
+    maxim_data,
+    maxim_lower_b,
+    maxim_upper_b,
+    maximum_extremes,
+    minim_data,
+    minim_lower_b,
+    minim_upper_b,
+    minimum_extremes,
+    np,
+    pd,
+    plt,
+    set_default_font,
+):
+    def animate_combined():
+        """Combined animation: time + ylim expand together, then scatter pulses."""
+        font = load_google_font("Space Mono", weight="regular", italic=False)
+        set_default_font(font)
+
+        # Colors
+        background = '#f0f0f0'
+        maxim_color = '#98231B'
+        minim_color = '#008080'
+        too_hot_color = '#cc6633'
+        too_cold_color = '#29a6a6'
+        tickcolor = '#333333'
+
+        # Theta mapping
+        total_months = len(minim_data.time.values)
+        global_x = np.arange(0, total_months + 2)
+        global_x_min = min(global_x)
+        global_x_max = max(global_x)
+        datetime_to_x = dict(zip(minim_data.time.values, global_x))
+
+        def x_to_theta(x):
+            return 2 * np.pi * (x - global_x_min) / (global_x_max - global_x_min)
+
+        r_offset = 15
+
+        theta_min_line = x_to_theta(np.arange(len(minim_data.time.values)))
+        theta_max_line = x_to_theta(np.arange(len(maxim_data.time.values)))
+        theta_band_min = x_to_theta(np.arange(len(minim_upper_b.time.values)))
+        theta_band_max = x_to_theta(np.arange(len(maxim_upper_b.time.values)))
+
+        # Yearly extremes
+        years = range(2011, 2025)
+        yearly_max_df = maximum_extremes.loc[
+            maximum_extremes.groupby('year')['extreme_temperature'].idxmax()
+        ]
+        yearly_min_df = minimum_extremes.loc[
+            minimum_extremes.groupby('year')['extreme_temperature'].idxmin()
+        ]
+        extremes_date = np.array(
+            [pd.Timestamp(f'{y}-07-01') for y in years], dtype='datetime64[ns]'
+        )
+        x_extremes = np.array([datetime_to_x.get(d) for d in extremes_date])
+        theta_extremes = x_to_theta(x_extremes)
+
+        # Year tick positions
+        year_ticks = [pd.Timestamp(f'{y}-01-01') for y in range(2011, 2025)]
+        x_ticks = [datetime_to_x.get(d) for d in year_ticks]
+        year_thetas = x_to_theta(np.array(x_ticks))
+
+        # --- Phase 1: expanding time + ylim together ---
+        step = 2
+        phase1_months = list(range(step, total_months + 1, step))
+        if phase1_months[-1] != total_months:
+            phase1_months.append(total_months)
+        n_phase1 = len(phase1_months)
+
+        # ylim eases out over phase 1
+        final_ylim = 46 + r_offset
+        start_ylim = r_offset - 5
+        t_ease = np.linspace(0, 1, n_phase1)
+        eased_t = 1 - (1 - t_ease) ** 2
+        ylim_phase1 = start_ylim + (final_ylim - start_ylim) * eased_t
+
+        # --- Phase 2: pulsing scatter ---
+        n_phase2 = 60  # 3 full sine cycles at 20 frames per cycle
+        s_min, s_max = 15, 80
+
+        total_frames = n_phase1 + n_phase2
+
+        # Create figure
+        fig, ax = plt.subplots(
+            figsize=(10, 10), dpi=100,
+            subplot_kw={'projection': 'polar'},
+        )
+        fig.set_facecolor(background)
+        fig.suptitle(
+            'Is Greece already experiencing global warming?',
+            fontsize=15, y=0.97,
+        )
+
+        n_points = len(theta_extremes)
+
+        def update(frame):
+            ax.clear()
+            ax.set_facecolor(background)
+
+            if frame < n_phase1:
+                # --- Phase 1: growing data + expanding ylim ---
+                n = phase1_months[frame]
+                current_ylim = ylim_phase1[frame]
+                scatter_size = 30  # constant during phase 1
+            else:
+                # --- Phase 2: full data, pulsing scatter ---
+                n = total_months
+                current_ylim = final_ylim
+                pulse_frame = frame - n_phase1
+                sine_val = np.sin(2 * np.pi * pulse_frame / 20)
+                scatter_size = s_min + (s_max - s_min) * (sine_val + 1) / 2
+
+            # Reference circles
+            full_theta = np.linspace(0, 2 * np.pi, 300)
+            ax.plot(full_theta, np.full_like(full_theta, 0 + r_offset),
+                    color=too_cold_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+            ax.plot(full_theta, np.full_like(full_theta, 30 + r_offset),
+                    color=too_hot_color, alpha=0.25, ls='dashed', lw=0.8, zorder=-1)
+
+            # Temperature lines
+            ax.plot(theta_min_line[:n], minim_data.values[:n] + r_offset,
+                    color=minim_color, alpha=0.6, linewidth=1.5, zorder=1)
+            ax.plot(theta_max_line[:n], maxim_data.values[:n] + r_offset,
+                    color=maxim_color, alpha=0.6, linewidth=1.5, zorder=3)
+
+            # Fill bands
+            nb_min = min(n, len(theta_band_min))
+            ax.fill_between(
+                theta_band_min[:nb_min],
+                minim_lower_b.values[:nb_min] + r_offset,
+                minim_upper_b.values[:nb_min] + r_offset,
+                color=minim_color, alpha=0.1, linewidth=0, zorder=0,
+            )
+            nb_max = min(n, len(theta_band_max))
+            ax.fill_between(
+                theta_band_max[:nb_max],
+                maxim_lower_b.values[:nb_max] + r_offset,
+                maxim_upper_b.values[:nb_max] + r_offset,
+                color=maxim_color, alpha=0.2, linewidth=0, zorder=2,
+            )
+
+            # Scatter for completed years
+            completed_years = min(n // 12, 14)
+            if completed_years > 0:
+                ax.scatter(
+                    theta_extremes[:completed_years],
+                    yearly_max_df['extreme_temperature'].values[:completed_years] + r_offset,
+                    marker='o', color=too_hot_color, alpha=0.8,
+                    s=scatter_size, zorder=5,
+                )
+                ax.scatter(
+                    theta_extremes[:completed_years],
+                    yearly_min_df['extreme_temperature'].values[:completed_years] + r_offset,
+                    marker='o', color=too_cold_color, alpha=0.8,
+                    s=scatter_size, zorder=5,
+                )
+
+            # Axis formatting
+            ax.set_xticks(year_thetas)
+            ax.set_xticklabels([str(y) for y in range(2011, 2025)],
+                               size=8, color=tickcolor)
+            temp_labels = [-10, 0, 10, 20, 30, 40]
+            temp_ticks = [-7, 0, 10, 20, 30, 40]
+            ax.set_yticks([tv + r_offset for tv in temp_ticks])
+            ax.set_yticklabels([f'{tl}°C' for tl in temp_labels],
+                               size=7, color=tickcolor)
+            ax.set_rlabel_position(0)
+            ax.set_ylim(0, current_ylim)
+            ax.set_theta_direction(-1)
+            ax.grid(True, color='grey', alpha=0.15, linewidth=0.5)
+            ax.spines['polar'].set_visible(False)
+            return []
+
+        anim = FuncAnimation(
+            fig, update, frames=total_frames, interval=80, blit=False,
+        )
+        anim.save(
+            CURRENT_DIR / 'polar_anim_combined.gif',
+            writer='pillow', fps=12, dpi=100,
+        )
+        plt.close(fig)
+        print(f"Saved: polar_anim_combined.gif ({n_phase1} growth frames + {n_phase2} pulse frames = {total_frames} total)")
+
+    animate_combined()
+    return
+
+
+@app.cell
+def _():
     return
 
 
