@@ -1390,6 +1390,7 @@ def _(
 def _(
     CURRENT_DIR,
     FuncAnimation,
+    fig_text,
     load_google_font,
     maxim_data,
     maxim_lower_b,
@@ -1503,6 +1504,16 @@ def _(
                 sine_val = np.sin(2 * np.pi * pulse_frame / 20)
                 scatter_size = s_min + (s_max - s_min) * (sine_val + 1) / 2
 
+                # --- Legend ---
+                fig_text(fig=fig, x=0.5, y=0.02,
+                         s='o Temperature extremes per year (<maximum> and <minimum>)',
+                         ha='center', size=8, color=tickcolor,
+                         highlight_textprops=[{'color': too_hot_color}, {'color': too_cold_color}])
+                fig_text(fig=fig, x=0.5, y=0.04,
+                 s='— Average daily temperature (<highest> and <lowest> daily)',
+                 ha='center', size=8, color=tickcolor,
+                 highlight_textprops=[{'color': maxim_color}, {'color': minim_color}])
+
             # Reference circles
             full_theta = np.linspace(0, 2 * np.pi, 300)
             ax.plot(full_theta, np.full_like(full_theta, 0 + r_offset),
@@ -1568,7 +1579,7 @@ def _(
             fig, update, frames=total_frames, interval=80, blit=False,
         )
         anim.save(
-            CURRENT_DIR / 'polar_anim_combined.gif',
+            CURRENT_DIR / 'polar_anim_combined_legend.gif',
             writer='pillow', fps=12, dpi=100,
         )
         plt.close(fig)
