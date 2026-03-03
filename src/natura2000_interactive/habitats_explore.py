@@ -19,16 +19,22 @@ def _():
     import matplotlib.colors as mcolors
     from pathlib import Path
     from pyfonts import load_google_font, set_default_font
+    from scipy import stats
 
     from habitat_colors import (
         assign_cluster,
         assign_cluster_color,
         CLUSTER_COLORS,
     )
+
+    from config import COUNTRY_CODES_NAMES
+    from visualizations import create_colorscale, get_text_color_for_background
     return (
         CLUSTER_COLORS,
         Path,
         assign_cluster,
+        create_colorscale,
+        get_text_color_for_background,
         go,
         gpd,
         json,
@@ -58,7 +64,7 @@ def _(Path, assign_cluster, pd):
 
     print(habitats.columns)
     print(habitatclass.columns)
-    return habitatclass, habitats
+    return csv_pth, habitatclass, habitats
 
 
 @app.cell
@@ -593,17 +599,6 @@ def _(CLUSTER_COLORS, go, habitat_country_cover, mcolors, rgb_to_rgba):
 
 
 @app.cell
-def _(habitat_country_cover):
-    cluster_country_links = (
-        habitat_country_cover.groupby(["CLUSTER", "COUNTRY_CODE"])["COVER_KM"]
-        .sum()
-        .reset_index()
-    )
-    cluster_country_links
-    return
-
-
-@app.cell
 def _(mo):
     mo.md(r"""### Chloropleth""")
     return
@@ -622,7 +617,7 @@ def _(Path, countries, map_countries, pd):
     country_names = [country_codes[c] for c in countries]
 
     europe = map_countries[map_countries.iso_a2_eh.isin(countries)]
-    return (europe,)
+    return country_codes, europe
 
 
 @app.cell
@@ -640,29 +635,6 @@ def _(europe, habitat_country_cover):
     )
     # choropleth_data
     return (choropleth_data,)
-
-
-@app.cell
-def _(choropleth_data, europe, px):
-    _cluster_name = 'Agricultural'
-    data = choropleth_data[choropleth_data.CLUSTER==_cluster_name]
-    _fig = px.choropleth(
-        data,
-        geojson=europe,
-        featureidkey="properties.iso_a2_eh",
-        locations='COUNTRY_CODE',
-        color='COVER_KM',
-        scope="europe",          # limit to Europe
-        fitbounds="locations",
-    )
-    _fig.show()
-    return
-
-
-@app.cell
-def _(choropleth_data):
-    choropleth_data[choropleth_data["CLUSTER"] == 'Other']
-    return
 
 
 @app.cell
@@ -772,6 +744,604 @@ def _(CLUSTER_COLORS, choropleth_data, europe, go, json, mcolors):
             color=COLORS["text_primary"],
         ),
         margin=dict(l=0, r=0, t=0, b=0),
+    )
+    _fig.show()
+    return COLORS, FONT_FAMILY, INLINE_FONTSIZE
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### Pictogram""")
+    return
+
+
+@app.cell
+def _(csv_pth, pd):
+    species = pd.read_csv(f'{csv_pth}/SPECIES.csv')
+    species = pd.read_csv(f'{csv_pth}/SPECIES.csv')
+    other_species = pd.read_csv(f'{csv_pth}/OTHERSPECIES.csv')
+
+    other_species = other_species.rename(columns={'SPECIESGROUP': 'SPGROUP'})
+    common_cols = other_species.columns.intersection(species.columns)
+
+    all_species = pd.concat([other_species[common_cols], species[common_cols]], ignore_index=True)
+    all_species.SPGROUP = all_species.SPGROUP.astype(str)
+    all_species = all_species[all_species.SPGROUP != 'nan']
+    return (all_species,)
+
+
+@app.cell
+def _(all_species):
+    all_species.columns
+    return
+
+
+@app.cell
+def _(all_species):
+    types = all_species.SPGROUP.unique().tolist()
+    species_count = all_species.groupby('SPGROUP').SPECIESNAME.nunique().reset_index(name='COUNT')
+    species_count['COUNT_HUNDREDS'] = species_count.COUNT / 100
+    species_count = species_count.sort_values(by='COUNT', ascending=False)
+    print(species_count.SPGROUP)
+
+    SPECIES_COLORS = {
+        'Amphibians': '#5A9A8B', #'#4ECDC4',  # Amphibians - Bright teal
+        'Birds': '#4A7BA7', #'#5B9BD5',  # Birds - Light blue
+        'Fish': '#2E86AB', #'#2E75B6',  # Fish - Deep blue
+        'Invertebrates': '#9B7BB8', #'#C55AD5',  # Invertebrates - Magenta
+        'Lichens': '#8B8B7A', #'#A0A0A0',  # Lichens - Medium gray
+        'Mammals': '#8B6F47', #'#C55A5A',  # Mammals - Terracotta
+        'Plants': '#6B8E5A', #'#70AD47',  # Plants - Fresh green
+        'Reptiles': '#A67C52' #'#D2691E'   # Reptiles - Chocolate
+    }
+
+    SPECIES_GROUPS = {
+        0: 'Amphibians',
+        1: 'Birds',
+        2: 'Fish',
+        3: 'Invertebrates',
+        4: 'Lichens',
+        5: 'Mammals',
+        6: 'Plants',
+        7: 'Reptiles'
+    }
+
+    def get_species_color(species_group):
+        """
+        Get the color for a species group.
+
+        Parameters:
+        -----------
+        species_group : string
+            The species group 
+
+        Returns:
+        --------
+        str
+            Hex color code for the species group
+        """
+        return SPECIES_COLORS.get(species_group, '#bbbaba')  # Default gray if not found
+    return SPECIES_COLORS, get_species_color, species_count
+
+
+@app.cell
+def _(
+    COLORS,
+    FONT_FAMILY,
+    INLINE_FONTSIZE,
+    get_species_color,
+    get_text_color_for_background,
+    go,
+    np,
+    species_count,
+):
+    species_count_data = species_count.copy()
+    species_count_data['COUNT_HUNDREDS'] = species_count_data['COUNT'] / 100
+
+    # Spiral parameters
+    initial_radius = 0  # Starting radius at the center
+    angular_spacing = 0.1  # Angular increment in radians (controls spacing along spiral)
+    radius_growth_rate = 0.2  # How much radius increases per angular step
+
+    # Track position along spiral (continuous angle, increasing radius)
+    current_angle = 0.0  # Start at angle 0
+    current_radius = initial_radius
+    series = []
+
+    for _i, row in species_count_data.iterrows():
+        _x = []
+        _y = []
+        count = int(row.COUNT_HUNDREDS)
+        stype = row.SPGROUP
+    
+        for j in range(0, count):
+            # Calculate position along spiral
+            # Radius increases gradually as we go around
+            current_radius = initial_radius + radius_growth_rate * current_angle
+        
+            # Convert polar to Cartesian coordinates
+            curr_x = current_radius * np.cos(current_angle)
+            curr_y = current_radius * np.sin(current_angle)
+        
+            _x.append(curr_x)
+            _y.append(curr_y)
+        
+            # Move to next position along spiral
+            current_angle += angular_spacing
+    
+        species_color = get_species_color(stype)
+        text_color = get_text_color_for_background(species_color)
+        series.append(
+            go.Scatter(
+                x=_x, 
+                y=_y, 
+                mode='markers', 
+                marker={
+                    'symbol': 'circle', 
+                    'line': dict(width=1, color=COLORS['white']),
+                    'size': 12, 
+                    'color': species_color
+                }, 
+                name=f'{stype} ({row.COUNT_HUNDREDS})',
+                hovertemplate=f'{stype} ({row.COUNT_HUNDREDS})<extra></extra>',
+                hoverlabel=dict(
+                    bgcolor=species_color,
+                    bordercolor='rgba(0,0,0,0)',
+                    font_size=INLINE_FONTSIZE,
+                    font_family=FONT_FAMILY,
+                    font_color=text_color,
+                ),
+            ),
+        )
+
+    _fig = go.Figure(
+        dict(
+            data=series, 
+            layout=go.Layout(
+                # title={'text': "Species", 'x': 0.5, 'xanchor': 'center'},
+                paper_bgcolor=COLORS['background'],
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    showgrid=False,
+                    zeroline=False, 
+                    showline=False, 
+                    visible=False, 
+                    showticklabels=False,
+                    scaleanchor='y',
+                    scaleratio=1  # Keep aspect ratio 1:1 for circular appearance
+                ),
+                yaxis=dict(
+                    showgrid=False,
+                    zeroline=False, 
+                    showline=False, 
+                    visible=False, 
+                    showticklabels=False
+                ),
+                legend=dict(
+                    title_text="Species count (in hundreds)",
+                    title_font=dict(
+                        family=FONT_FAMILY,
+                        size=INLINE_FONTSIZE,
+                        color=COLORS['text_primary']
+                    ),
+                    font=dict(
+                        family=FONT_FAMILY,
+                        size=INLINE_FONTSIZE - 1,
+                        color=COLORS['text_primary']
+                    )
+                ),
+                font=dict(
+                    family=FONT_FAMILY,
+                    size=INLINE_FONTSIZE,
+                    color=COLORS['text_primary']
+                ),
+            )
+        )
+    )
+    _fig.show()
+    return (species_count_data,)
+
+
+@app.cell
+def _(
+    COLORS,
+    FONT_FAMILY,
+    INLINE_FONTSIZE,
+    get_species_color,
+    get_text_color_for_background,
+    go,
+    np,
+    species_count_data,
+):
+
+    def bar():
+        n_species = len(species_count_data)
+        # Calculate angular width for each bar (360 degrees / number of species)
+        angular_width = 360 / n_species
+    
+        # Create polar bar chart
+        fig = go.Figure()
+    
+        # Get unique count values for grid lines (only show values that exist in the data)
+        unique_counts = sorted(species_count_data['COUNT'].unique())
+        min_count = species_count_data['COUNT'].min()
+        max_count = species_count_data['COUNT'].max()
+    
+        # Transform counts to log scale for visualization
+        # Add small epsilon to avoid log(0) issues
+        epsilon = 1e-10
+        log_counts = [np.log10(count + epsilon) for count in species_count_data['COUNT']]
+        log_min = np.log10(min_count + epsilon)
+        log_max = np.log10(max_count + epsilon)
+        log_unique_counts = [np.log10(c + epsilon) for c in unique_counts]
+    
+        # Add bars for each species type (using log-transformed values)
+        for idx, (_, row) in enumerate(species_count_data.iterrows()):
+            stype = row.SPGROUP
+            count = row.COUNT
+            count_log = log_counts[idx]
+            species_color = get_species_color(stype)
+            text_color = get_text_color_for_background(species_color)
+        
+            # Calculate the angle for this bar (center of the angular segment)
+            # Start from top (90 degrees) and go clockwise
+            theta = 90 - (idx * angular_width + angular_width / 2)
+        
+            # Add the radial bar (using log-transformed value)
+            fig.add_trace(go.Barpolar(
+                r=[count_log],
+                theta=[theta],
+                width=[angular_width * 0.9],  # Slightly smaller than full width for spacing
+                marker_color=species_color,
+                marker_line_color=species_color,
+                marker_line_width=0,
+                name=stype,
+                hovertemplate=f'<b>{stype}</b><br>Count: {count:,}<extra></extra>',
+                hoverlabel=dict(
+                    bgcolor=species_color,
+                    bordercolor='rgba(0,0,0,0)',
+                    font_size=INLINE_FONTSIZE,
+                    font_family=FONT_FAMILY,
+                    font_color=text_color,
+                ),
+            ))
+    
+        # Update layout for polar coordinates with log scale (transformed data)
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[log_min, log_max * 1.15],  # Add padding for labels
+                    showgrid=False,
+                    gridcolor=COLORS['white'],  # Subtle grid
+                    gridwidth=.8,
+                    tickmode='array',
+                    tickvals=log_unique_counts,  # Grid lines at actual bar values (log scale)
+                    # ticktext=[f'{c:,}' for c in unique_counts],  # Format tick labels with original values
+                    ticktext=['' for c in unique_counts],  # Format tick labels with original values
+                    tickfont=dict(
+                        family=FONT_FAMILY,
+                        size=INLINE_FONTSIZE - 2,
+                        color=COLORS['text_primary']
+                    ),
+                    tickcolor=COLORS['text_primary'],
+                    showline=False,
+                    linecolor=COLORS['text_primary'],
+                ),
+                angularaxis=dict(
+                    visible=True,
+                    rotation=90,  # Start from top
+                    direction='clockwise',
+                    showgrid=False,
+                    showline=False,
+                    showticklabels=False,
+                ),
+                bgcolor='rgba(0,0,0,0)',
+            ),
+            paper_bgcolor=COLORS['background'],
+            plot_bgcolor='rgba(0,0,0,0)',
+            showlegend=False,
+            font=dict(
+                family=FONT_FAMILY,
+                size=INLINE_FONTSIZE,
+                color=COLORS['text_primary']
+            ),
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+    
+        # Add text annotations for species types around the perimeter using scatterpolar
+        # Position labels outside the chart area
+        # annotation_radius_log = log_max * 1.05
+    
+        # Collect annotation data and add connecting lines
+        for idx, (_, row) in enumerate(species_count_data.iterrows()):
+            stype = row.SPGROUP
+            count_log = log_counts[idx]
+            # Calculate angle for annotation (same as bar center)
+            theta = 90 - (idx * angular_width + angular_width / 2)
+        
+            # Add connecting line from end of bar to label (dashed line)
+            line_radius_log = count_log * 1.11
+            if row.SPGROUP in ['Amphibians', 'Reptiles']:
+                line_radius_log = count_log * 1.26
+        
+            fig.add_trace(go.Scatterpolar(
+                r=[count_log, line_radius_log],
+                theta=[theta, theta],
+                mode='lines',
+                line=dict(
+                    color=COLORS['white'],#'rgba(0,0,0,0.2)',
+                    width=1,
+                    dash='dash'
+                ),
+                showlegend=False,
+                hoverinfo='skip',
+            ))
+        
+            # Add a small black dot at the end of the bar
+            fig.add_trace(go.Scatterpolar(
+                r=[count_log],
+                theta=[theta],
+                mode='markers',
+                marker=dict(
+                    size=4,
+                    color=COLORS['white'],#'rgba(0,0,0,0.7)',
+                    symbol='circle',
+                    line=dict(width=0)
+                ),
+                showlegend=False,
+                hoverinfo='skip',
+            ))
+        
+            annotation_text = f"{row.SPGROUP}: {row.COUNT}"
+            annotation_radius_log = count_log * 1.14
+            if row.SPGROUP in ['Amphibians', 'Reptiles']:
+                annotation_radius_log = count_log * 1.3
+            
+            fig.add_trace(go.Scatterpolar(
+                r=[annotation_radius_log],
+                theta=[theta],
+                mode='text',
+                text=annotation_text,
+                textfont=dict(
+                    family=FONT_FAMILY,
+                    size=INLINE_FONTSIZE - 1,
+                    color=COLORS['text_primary']
+                ),
+                showlegend=False,
+                hoverinfo='skip',
+                )
+             )
+        fig.show()
+
+    bar()
+    return
+
+
+@app.cell
+def _(all_species, csv_pth, pd):
+    sites = pd.read_csv(csv_pth / 'NATURA2000SITES.csv')
+    species_sites = all_species.groupby(['SITECODE', 'SPGROUP'])['SPECIESNAME'].nunique().reset_index(name='COUNT')
+    # print(sites.columns)
+    species_count_sites = all_species.merge(sites[['LATITUDE', 'LONGITUDE', 'AREAHA', 'SITECODE']], on='SITECODE', how='left')
+    species_count_sites = (species_count_sites
+        .groupby(
+            ['SPGROUP', 'SITECODE', 'LATITUDE', 'LONGITUDE', 'COUNTRY_CODE']
+        )['SPECIESNAME']
+            .nunique().reset_index(name='COUNT')
+    )
+    return (species_count_sites,)
+
+
+@app.cell
+def _(
+    COLORS,
+    FONT_FAMILY,
+    INLINE_FONTSIZE,
+    SPECIES_COLORS,
+    country_codes,
+    create_colorscale,
+    go,
+    mcolors,
+    px,
+    species_count_sites,
+):
+    _species_type = 'Fish'
+    species_data = species_count_sites[
+        species_count_sites['SPGROUP'] == _species_type
+    ].copy()
+
+    species_data['COUNTRY'] = species_data.COUNTRY_CODE.map(country_codes)
+    species_data = species_data[species_data.COUNT > 1]
+    species_data['hover_text'] = species_data.apply(
+        lambda row: f"No. {_species_type.lower()}: {row.COUNT}<br>Country: {row.COUNTRY}", axis=1)
+
+    species_data = species_data.sort_values(by='COUNT')
+
+    def _cluster_colorscale(hex_color):
+        """Build a light→full colorscale from a cluster hex color."""
+        r, g, b = mcolors.to_rgb(hex_color)
+        # Light version, slightly tinted toward background
+        bg_r, bg_g, bg_b = mcolors.to_rgb(COLORS["background"])
+        light = (
+            0.8 * bg_r + 0.2 * r,
+            0.8 * bg_g + 0.2 * g,
+            0.8 * bg_b + 0.2 * b,
+        )
+        light_rgba = f"rgba({int(light[0]*255)}, {int(light[1]*255)}, {int(light[2]*255)}, 0.5)"
+        full_rgba = f"rgba({int(r*255)}, {int(g*255)}, {int(b*255)}, 1.0)"
+        return [
+            [0.0, light_rgba],
+            [1.0, full_rgba],
+        ]
+
+    # Get base color for this species type
+    _base_color = SPECIES_COLORS[_species_type]
+    _colorscale = create_colorscale(_base_color)
+
+    # Normalize COUNT values for colorscale (0 to 1)
+    min_count = species_data['COUNT'].min()
+    max_count = species_data['COUNT'].max()
+
+    if max_count == min_count:
+
+        # All counts are the same, use uniform color
+        normalized_counts = [0.5] * len(species_data)
+    else:
+        normalized_counts = (species_data['COUNT'] - min_count) / (max_count - min_count)
+
+    # Create scatter map plot
+    _fig = go.Figure()
+
+    light_background, _ = create_colorscale(COLORS['background']) # get the color for the map background
+    map_color = light_background[1]
+
+    _fig = px.scatter_geo(
+            species_data,
+            lat='LATITUDE',
+            lon='LONGITUDE',
+            color='COUNT',
+            hover_name='SITECODE',
+            color_continuous_scale=_colorscale,
+            opacity=0.7,
+            labels={'COUNT': 'Species Count', 'COUNTRY': 'Country'},
+            size='COUNT',
+            size_max=15,
+            custom_data=['hover_text'],
+        )
+
+    _fig.update_traces(
+        marker=dict(
+                # size=10,
+                line=dict(width=0.1, color=COLORS['white'])
+            ),
+        hovertemplate=(
+                "<b>%{hovertext}</b><br>" +
+                "%{customdata[0]}" +
+                "<extra></extra>"
+            )
+        )
+
+    _fig.update_geos(
+        scope="europe",
+        visible=False,
+        showcountries=False,
+        showcoastlines=False,
+        showland=True,
+        projection_scale=2.50,
+        center=dict(lat=55, lon=15),
+        landcolor=map_color,
+        bgcolor=COLORS["white"],
+    )
+
+    # Update layout
+    _fig.update_layout(
+        mapbox=dict(
+            style="open-street-map",  # Free map style
+            center=dict(
+                lat=species_data['LATITUDE'].mean(),
+                lon=species_data['LONGITUDE'].mean()
+            ),
+            zoom=4  # Adjust zoom level as needed
+        ),
+        hoverlabel=dict(
+            bordercolor=COLORS['white'],
+            font_size=12,
+            font_family='Noto Sans Mono',
+            font_color=COLORS['text_primary'],
+            align='left'
+        ),
+        title=dict(
+            text=f"{_species_type} Distribution Across Natura 2000 Sites",
+            x=0.5,
+            xanchor='center',
+            font=dict(family=FONT_FAMILY, size=INLINE_FONTSIZE + 2, color=COLORS['text_primary'])
+        ),
+        height=600,
+        width=900,
+        plot_bgcolor=COLORS['background'],
+        paper_bgcolor=COLORS['background'],
+        font=dict(
+            family=FONT_FAMILY,
+            size=INLINE_FONTSIZE,
+            color=COLORS['text_primary']
+        ),
+        margin=dict(l=0, r=0, t=50, b=0)
+    )
+
+    _fig.show()
+    return
+
+
+@app.cell
+def _(
+    COLORS,
+    INLINE_FONTSIZE,
+    SPECIES_COLORS,
+    create_colorscale,
+    go,
+    species_count,
+    species_per_country,
+):
+    _fig = go.Figure()
+    species_types = species_count.SPGROUP.unique()
+
+    y_positions = {species: i for i, species in enumerate(species_types)}
+
+
+    for species_type in species_types:
+        data = species_per_country[species_per_country.SPGROUP == species_type]
+        if len(data) == 0:
+            continue
+        y_pos = [y_positions[species_type]] * len(data)
+
+        # Get base color for this species type
+        base_color = SPECIES_COLORS[species_type]
+        _colorscale = create_colorscale(base_color, 1)
+
+        _fig = _fig.add_trace(go.Scatter(
+            x=data.COUNTRY_CODE,
+            y=y_pos,
+            mode='markers',
+            name=species_type,
+            marker=dict(
+                size=data.COUNT,
+                sizemode='diameter',
+                sizeref=data.COUNT.max() / 50 if data.COUNT.max() > 0 else 1,
+                color=data.COUNT,
+                colorscale=_colorscale,
+                opacity=1,
+                showscale=False,  # Only show colorbar for last trace
+                cmin=species_per_country['COUNT'].min(),
+                cmax=species_per_country['COUNT'].max(),
+                line=dict(width=1, color='white')
+            ),
+            text=data.COUNTRY_CODE,
+            hovertemplate=f'<b>{species_type}</b><br>Country: %{{text}}<br>Count: %{{marker.size}}<extra></extra>'
+        ))
+
+    # Update y-axis
+    _fig.update_layout(
+        yaxis=dict(
+            tickmode='array',
+            tickvals=list(range(len(species_types))),
+            ticktext=species_types,
+            title="Species Type",
+            zeroline=False,
+            gridwidth=.8,
+            gridcolor='rgba(252, 255, 247, 0.3)',
+        ),
+        xaxis=dict(
+            title="Country Code", 
+            zeroline=False,
+            gridcolor='rgba(252, 255, 247, 0.3)',
+            gridwidth=.8,
+        ),
+        plot_bgcolor=COLORS['background'],
+        paper_bgcolor=COLORS['background'],
+        height=600,
+        showlegend=True,
+        font_size=INLINE_FONTSIZE,
     )
     _fig.show()
     return

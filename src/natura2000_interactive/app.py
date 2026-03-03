@@ -25,7 +25,7 @@ from visualizations import (
     create_scatter_plot, 
     create_sankey_diagram, 
     create_cluster_choropleth_grid,
-    create_species_pictogram,
+    create_species_bar_polar_chart,
     create_species_per_country_scatter,
     create_species_scatter_map
 )
@@ -405,19 +405,30 @@ app.index_string = '''
             /* MARGIN ADJUSTMENT: Change margin to adjust spacing for side-by-side story and plot */
             .story-point-with-plot {
                 display: flex;
-                align-items: center;
-                gap: 2rem;
-                margin: 3rem 0;  /* ADJUST THIS: Reduced from 6rem. Increase for more space, decrease for less */
+                align-items: stretch;
+                justify-content: center;
+                gap: 0;  /* No gap between text and plot */
+                margin: 3rem auto;  /* Center the whole block on the page */
                 max-width: 1400px;
             }
             
             .story-point-with-plot .story-point {
-                flex: 0 0 45%;
+                flex: 0 0 50%;   /* Take exactly half of the width */
                 margin: 0;
+                max-width: none;
+                display: flex;          /* NEW: make it a flex container */
+                align-items: center;
             }
             
             .story-point-with-plot .plot-wrapper {
-                flex: 0 0 50%;
+                flex: 0 0 50%;   /* Take exactly half of the width */
+            }
+            
+            /* Fine-tune story text inside side-by-side layout */
+            .story-point-with-plot .story-point p {
+                max-width: 80%;        /* Use a bit less than the full half */
+                margin-left: auto;     /* Push text block towards the inner border */
+                text-align: right;     /* Align text close to the plot side */
             }
             
             /* Natura 2000 text styling */
@@ -754,7 +765,7 @@ app.layout = html.Div([
             html.Div([
                 dcc.Graph(
                     id='species-pictogram',
-                    figure=create_species_pictogram(species_count_data),
+                    figure=create_species_bar_polar_chart(species_count_data),
                     config={'displayModeBar': False}
                 ),
             ], className="plot-wrapper")

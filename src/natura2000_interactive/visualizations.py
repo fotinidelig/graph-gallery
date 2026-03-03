@@ -647,7 +647,7 @@ def create_cluster_choropleth_grid(chloropleth_data, europe_gdf):
     return fig
 
 
-def create_species_pictogram(species_count_data):
+def create_species_bar_polar_chart(species_count_data):
     """
     Create a radial bar chart (polar bar chart) showing species counts by type.
     Uses log scale to handle large value ranges effectively.

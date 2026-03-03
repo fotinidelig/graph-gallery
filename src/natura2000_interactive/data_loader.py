@@ -319,8 +319,12 @@ def prepare_species_scatter_map_data(species_data, data_dir=None):
     else:
         base_path = Path(data_dir)
     
-    # Load sites data
-    sites = pd.read_csv(base_path / 'NATURA2000SITES.csv')
+    # Load sites data (use processed version if available, otherwise original)
+    processed_sites_path = base_path / 'NATURA2000SITES_processed.csv'
+    if processed_sites_path.exists():
+        sites = pd.read_csv(processed_sites_path)
+    else:
+        sites = pd.read_csv(base_path / 'NATURA2000SITES.csv')
     
     # Merge species data with site location data
     species_count_sites = (
@@ -361,8 +365,12 @@ def prepare_species_per_country_data(species_data, data_dir=None):
     else:
         base_path = Path(data_dir)
     
-    # Load sites data to get COUNTRY_CODE
-    sites = pd.read_csv(base_path / 'NATURA2000SITES.csv')
+    # Load sites data to get COUNTRY_CODE (use processed version if available)
+    processed_sites_path = base_path / 'NATURA2000SITES_processed.csv'
+    if processed_sites_path.exists():
+        sites = pd.read_csv(processed_sites_path)
+    else:
+        sites = pd.read_csv(base_path / 'NATURA2000SITES.csv')
     
     # Merge species data with sites to get COUNTRY_CODE
     species_with_country = species_data.merge(
