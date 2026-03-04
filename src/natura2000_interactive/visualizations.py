@@ -122,8 +122,8 @@ def create_scatter_plot(scatter_data):
     ----------
     scatter_data : pandas.DataFrame
         DataFrame containing habitat data with columns:
-        - COUNT: Number of sites
-        - COVER_KM: Total coverage in km²
+        - COUNT: Number of sites (represented by order of points in the spiral)
+        - COVER_KM: Total coverage in km² (represented by size of scatter points)
         - CLUSTER: Habitat cluster name
         - DESCRIPTION: Habitat description
         
@@ -132,20 +132,24 @@ def create_scatter_plot(scatter_data):
     plotly.graph_objects.Figure
         Scatter plot figure
     """
-    xy = generate_squashed_spiral(len(scatter_data['COUNT'].values))
-    x = xy[:, 0]
-    y = xy[:, 1]
+
+    scatter_data_copy = scatter_data.copy().sort_values(by='COUNT', ascending=False)
     
-    scatter_data_copy = scatter_data.copy()
-    scatter_data_copy['x'] = x
-    scatter_data_copy['y'] = y
-    scatter_data_copy['No. sites (k)'] = (scatter_data_copy.COUNT/1000).map(
-        lambda x: np.round(x, decimals=2)
-    )
-    scatter_data_copy['Area covered (k km2)'] = (scatter_data_copy.COVER_KM/1000).map(
-        lambda x: int(x)
-    )
-    # print(scatter_data_copy['COUNT'].sum()/1000)
+    # Normalise COUNT to [0, 1] for opacity
+    counts = scatter_data_copy['COUNT'].astype(float)
+    c_min, c_max = counts.min(), counts.max()
+    scatter_data_copy['OPACITY'] = 0.5 + 0.5 * (counts - c_min) / (c_max - c_min + 1e-9)
+
+    # Generate spiral coordinates AFTER sorting so that early rows (high COUNT)
+    # are mapped to positions closer to (0, 0) and later rows (low COUNT) further out.
+    xy = generate_squashed_spiral(len(scatter_data_copy))
+    scatter_data_copy['x'] = xy[:, 0]
+    scatter_data_copy['y'] = xy[:, 1]
+
+    # Pre-compute values for hover (in thousands)
+    scatter_data_copy['COUNT_K'] = scatter_data_copy['COUNT'] / 1000.0
+    scatter_data_copy['COVER_KM_K'] = scatter_data_copy['COVER_KM'] / 1000.0
+
     fig = px.scatter(
         scatter_data_copy,
         x='x',
@@ -154,18 +158,16 @@ def create_scatter_plot(scatter_data):
         color='CLUSTER',
         color_discrete_map=CLUSTER_COLORS,
         hover_name='DESCRIPTION',
+        custom_data=['COUNT_K', 'COVER_KM_K'],
         labels=dict(CLUSTER='Habitat type'),
         size_max=50,
     )
-    
-    # Add customdata and hovertemplate via update_traces
+
+    # Add hovertemplate via update_traces (customdata already set via px.scatter)
     fig.update_traces(
-        customdata=np.column_stack(
-            ((scatter_data_copy['COUNT']/1000).values, (scatter_data_copy['COVER_KM']/1000).values)
-        ),
         hovertemplate=(
-            "<b>%{hovertext}</b><br>"+
-            "No. sites: %{customdata[0]:.1f}k<br>"+
+            "<b>%{hovertext}</b><br>"
+            "No. sites: %{customdata[0]:.1f}k<br>"
             "Area covered: %{customdata[1]:.1f}k km²<extra></extra>"
         )
     )
@@ -173,44 +175,37 @@ def create_scatter_plot(scatter_data):
     # Update traces with marker styling and per-trace hoverlabel
     for trace in fig.data:
         cluster_name = trace.name
-        if cluster_name in CLUSTER_COLORS:
-            cluster_color = CLUSTER_COLORS[cluster_name]
-            text_color = get_text_color_for_background(cluster_color)
-            trace.update(
-                marker=dict(
-                    line=dict(
-                        width=1.2,
-                        color=COLORS['white']
-                    ),
-                    opacity=0.9,
+
+        # Set opacity for each trace based on the cluster
+        mask = scatter_data_copy['CLUSTER'] == cluster_name
+        opacities = scatter_data_copy.loc[mask, 'OPACITY'].values
+        
+        # Base cluster color as RGB
+        base_hex = CLUSTER_COLORS[cluster_name]
+        r, g, b = mcolors.to_rgb(base_hex)
+        r, g, b = int(r * 255), int(g * 255), int(b * 255)
+
+        # Per-point fill colors with varying alpha
+        fill_colors = [f"rgba({r}, {g}, {b}, {a})" for a in opacities]
+
+        text_color = get_text_color_for_background(base_hex)
+        trace.update(
+            marker=dict(
+                color=fill_colors,
+                line=dict(
+                    width=3,
+                    color=base_hex
                 ),
-                hoverlabel=dict(
-                    bgcolor=cluster_color,
-                    bordercolor='rgba(0,0,0,0)',
-                    font_size=INLINE_FONTSIZE,
-                    font_family=FONT_FAMILY,
-                    font_color=text_color,
-                    align='left'
-                )
+            ),
+            hoverlabel=dict(
+                bgcolor=base_hex,
+                bordercolor='rgba(0,0,0,0)',
+                font_size=INLINE_FONTSIZE,
+                font_family=FONT_FAMILY,
+                font_color=text_color,
+                align='left'
             )
-        else:
-            trace.update(
-                marker=dict(
-                    line=dict(
-                        width=1.2,
-                        color=COLORS['white']
-                    ),
-                    opacity=0.9,
-                ),
-                hoverlabel=dict(
-                    bgcolor=COLORS['background'],
-                    bordercolor='rgba(0,0,0,0)',
-                    font_size=INLINE_FONTSIZE,
-                    font_family=FONT_FAMILY,
-                    font_color=COLORS['text_primary'],
-                    align='left'
-                )
-    )
+        )
     
     fig.update_layout(
         plot_bgcolor=COLORS['background'],
@@ -268,13 +263,11 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
         r, g, b = rgb
         return f'rgba({int(r * 255)}, {int(g * 255)}, {int(b * 255)}, {alpha})'
 
-    
-    # Get unique nodes
+
     clusters = sankey_data["CLUSTER"].unique()
     descriptions = sankey_data["DESCRIPTION"].unique()
     countries = sankey_data["COUNTRY_CODE"].unique()
     
-    # Map country codes to country names
     country_names = [COUNTRY_CODES_NAMES.get(code, code) for code in countries]
 
     # ---------------------------------------------------------------------
@@ -384,7 +377,6 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
     # Color links by source cluster and dim if filtered
     link_colors = []
     for i, src_idx in enumerate(source):
-        # Determine base color
         if src_idx < len(descriptions):
             # Link from description -> cluster (color by description's cluster)
             desc_name = node_labels[src_idx]
@@ -407,7 +399,7 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
             else:
                 link_colors.append(rgb_to_rgba(rgb, alpha=0.4))
     
-    # # Dim nodes that aren't connected to the selected node
+    # Dim nodes that aren't connected to the selected node
     if selected_node_index is not None:
         dimmed_node_colors = []
         for i, color in enumerate(node_colors):
@@ -436,7 +428,6 @@ def create_sankey_diagram(sankey_data, selected_node_index=None, dim_color=COLOR
             if i >= len(descriptions):
                 continue
 
-            # label_wrapped = wrap_text(node_labels[i], max_chars_per_line=28)
             node_text_labels[i] = node_labels[i].split('(')[0]
     
     fig = go.Figure(
