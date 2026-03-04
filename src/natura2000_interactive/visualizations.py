@@ -768,7 +768,7 @@ def create_species_bar_polar_chart(species_count_data):
             theta=[theta, theta],
             mode='lines',
             line=dict(
-                color=COLORS['white'],
+                color=COLORS['text_primary'],
                 width=1,
                 dash='dash'
             ),
@@ -783,7 +783,7 @@ def create_species_bar_polar_chart(species_count_data):
             mode='markers',
             marker=dict(
                 size=4,
-                color=COLORS['white'],
+                color=COLORS['text_primary'],
                 symbol='circle',
                 line=dict(width=0)
             ),
@@ -793,9 +793,10 @@ def create_species_bar_polar_chart(species_count_data):
         
         # Add text annotation with species name and count
         annotation_text = f"{row.SPGROUP}: {row.COUNT}"
-        annotation_radius_log = count_log * 1.16
+        annotation_radius_log = count_log * 1.15
         if row.SPGROUP in ['Amphibians', 'Reptiles']:
             annotation_radius_log = count_log * 1.32
+    
         fig.add_trace(go.Scatterpolar(
             r=[annotation_radius_log],
             theta=[theta],
@@ -809,7 +810,7 @@ def create_species_bar_polar_chart(species_count_data):
             showlegend=False,
             hoverinfo='skip',
         ))
-    
+    fig.write_html("./graph_gallery/src/natura2000_interactive/species_bar_polar_chart.html")
     return fig
 
 
@@ -933,7 +934,7 @@ def create_species_per_country_scatter(species_per_country, species_count_data):
     return fig
 
 
-def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
+def create_species_scatter_map(species_count_sites, species_type, europe_gdf, country_code=None):
     """
     Create a scatter map plot showing species distribution across Natura 2000 sites
     for a specific species type, with Europe map background.
@@ -964,6 +965,10 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
         species_data = species_count_sites[
             species_count_sites['SPGROUP'] == 'Fish'
         ].copy()
+    
+    # Optionally filter by country
+    if country_code is not None and country_code != 'ALL':
+        species_data = species_data[species_data['COUNTRY_CODE'] == country_code].copy()
     
     # Get base color for this species type
     base_color = get_species_color(species_type)
@@ -1015,21 +1020,49 @@ def create_species_scatter_map(species_count_sites, species_type, europe_gdf):
     )
     
     # Update layout with same geo settings as choropleth, but with visible borders
-    fig.update_geos(
-        scope="europe",
-        visible=False,
-        showcountries=True,
-        showcoastlines=True,
-        showland=True,
-        projection_scale=2,
-        center=dict[str, int](lat=50, lon=15),
-        landcolor=map_color,
-        bgcolor=COLORS["white"],
-        countrycolor=COLORS['white'],
-        coastlinecolor=map_color,
-        # lataxis_range=[35, 72],
-        # lonaxis_range=[-12, 42],
-    )
+    # Adjust map view: zoom to selected country if specified, otherwise show Europe
+    if country_code is not None and country_code != 'ALL' and not species_data.empty:
+        lat_min = species_data['LATITUDE'].min()
+        lat_max = species_data['LATITUDE'].max()
+        lon_min = species_data['LONGITUDE'].min()
+        lon_max = species_data['LONGITUDE'].max()
+        
+        # Add a small padding
+        lat_pad = (lat_max - lat_min) * 0.5 if lat_max > lat_min else 1.0
+        lon_pad = (lon_max - lon_min) * 0.5 if lon_max > lon_min else 1.0
+        
+        center_lat = float((lat_min + lat_max) / 2.0)
+        center_lon = float((lon_min + lon_max) / 2.0)
+        
+        fig.update_geos(
+            scope="europe",
+            visible=False,
+            showcountries=True,
+            showcoastlines=True,
+            showland=True,
+            center=dict(lat=center_lat, lon=center_lon),
+            projection_scale=3,
+            landcolor=map_color,
+            bgcolor=COLORS["white"],
+            countrycolor=COLORS['white'],
+            coastlinecolor=map_color,
+            lataxis_range=[lat_min - lat_pad, lat_max + lat_pad],
+            lonaxis_range=[lon_min - lon_pad, lon_max + lon_pad],
+        )
+    else:
+        fig.update_geos(
+            scope="europe",
+            visible=False,
+            showcountries=True,
+            showcoastlines=True,
+            showland=True,
+            projection_scale=2,
+            center=dict(lat=50, lon=15),
+            landcolor=map_color,
+            bgcolor=COLORS["white"],
+            countrycolor=COLORS['white'],
+            coastlinecolor=map_color,
+        )
     
     # Update layout styling
     fig.update_layout(

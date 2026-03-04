@@ -29,7 +29,7 @@ from visualizations import (
     create_species_per_country_scatter,
     create_species_scatter_map
 )
-from config import APP_PORT, APP_DEBUG, FONT_FAMILY, FONT_FAMILY_STORY, COLORS
+from config import APP_PORT, APP_DEBUG, FONT_FAMILY, FONT_FAMILY_STORY, COLORS, COUNTRY_CODES_NAMES
 
 
 # Initialize app with minimal Bootstrap theme
@@ -91,6 +91,9 @@ app.index_string = '''
         {%favicon%}
         {%css%}
         <style>
+            html {
+                scroll-behavior: smooth;
+            }
             @import url('https://fonts.googleapis.com/css2?family=''' + font_family_css + ''':wght@300;400;500;600&display=swap');
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
             
@@ -355,7 +358,7 @@ app.index_string = '''
                 z-index: 2;
                 max-width: 1400px;
                 margin: 0 auto;
-                padding: 1rem 1rem;  /* ADJUST THIS: Reduced from 4rem vertical. Increase for more space, decrease for less */
+                padding: 3.5rem 1rem 1rem 1rem;  /* Extra top padding to clear fixed top bar */
             }
             
             
@@ -431,6 +434,111 @@ app.index_string = '''
                 text-align: right;     /* Align text close to the plot side */
             }
             
+            /* Fine-tune story text inside side-by-side layout */
+            .story-point-with-plot .story-point p {
+                max-width: 80%;        /* Use a bit less than the full half */
+                margin-left: auto;     /* Push text block towards the inner border */
+                text-align: right;     /* Align text close to the plot side */
+            }
+            
+            /* Top navigation bar */
+            .top-bar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 100;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.4rem 1.5rem;
+                background: rgba(252, 255, 247, 0.3);
+                backdrop-filter: blur(6px);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-size: 0.8rem;
+            }
+            
+            .top-bar-left,
+            .top-bar-right {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            
+            .top-bar-button {
+                border: 1px solid ''' + COLORS['details'] + ''';
+                background: rgba(252, 255, 247, 0.9);
+                color: ''' + COLORS['text_primary'] + ''';
+                cursor: pointer;
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-size: 0.8rem;
+                padding: 0.3rem 0.8rem;
+                border-radius: 999px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                text-decoration: none;
+                transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            }
+            
+            .top-bar-button:hover {
+                background: ''' + COLORS['details'] + ''';
+                color: ''' + COLORS['white'] + ''';
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            }
+            
+            .top-bar-button-circle {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                padding: 0;
+                font-size: 1.5rem;
+            }
+            
+            /* Top info box */
+            .top-info-box {
+                position: fixed;
+                top: 3rem;
+                right: 1.5rem;
+                z-index: 90;
+                width: 260px;
+                max-width: 70vw;
+                background: rgba(252, 255, 247, 0.96);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+                padding: 0.9rem 1rem;
+                border-left: 3px solid ''' + COLORS['details'] + ''';
+                font-family: ''' + FONT_FAMILY + ''', monospace;
+                font-size: 0.85rem;
+                line-height: 1.5;
+                color: ''' + COLORS['text_primary'] + ''';
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-6px);
+                transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+            }
+            
+            .top-info-box.visible {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+            
+            .top-info-box h3 {
+                margin: 0 0 0.4rem 0;
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: ''' + COLORS['text_primary'] + ''';
+            }
+            
+            .top-info-box p {
+                margin: 0;
+                font-size: 0.82rem;
+            }
+            
             /* Natura 2000 text styling */
             .natura-text {
                 color: ''' + COLORS['natura_blue'] + ''';
@@ -499,10 +607,27 @@ app.index_string = '''
                 margin: 0 auto !important;
             }
             
+            /* Show hand cursor on Sankey nodes (they are clickable/selectable) */
+            .js-plotly-plot .sankey-node,
+            .js-plotly-plot .sankey-node text {
+                cursor: pointer;
+            }
+
+            /* Indicate that maps can be panned/zoomed */
+            #choropleth-grid .js-plotly-plot,
+            #species-scatter-map .js-plotly-plot {
+                cursor: grab;
+            }
+
+            #choropleth-grid .js-plotly-plot:active,
+            #species-scatter-map .js-plotly-plot:active {
+                cursor: grabbing;
+            }
+            
             /* Toggleable graph annotation */
             .toggle-annotation {
                 position: absolute;
-                left: -60px;
+                left: 50px;
                 top: 10px;
                 z-index: 10;
                 display: flex;
@@ -510,11 +635,12 @@ app.index_string = '''
             }
             
             .toggle-annotation-button {
-                width: 40px;
-                height: 40px;
+                width: 35px;
+                height: 35px;
                 border-radius: 50%;
                 background: ''' + COLORS['white'] + ''';
-                border: 2px solid ''' + COLORS['details'] + ''';
+                opacity: 0.7;
+                border: 0px solid ''' + COLORS['white'] + ''';
                 cursor: pointer;
                 display: flex;
                 align-items: center;
@@ -526,6 +652,8 @@ app.index_string = '''
                 color: ''' + COLORS['text_primary'] + ''';
                 z-index: 11;
                 flex-shrink: 0;
+                /* Subtle pulsing animation to draw attention */
+                animation: toggle-pulse 2.6s ease-in-out infinite;
             }
             
             .toggle-annotation-button:hover {
@@ -562,6 +690,19 @@ app.index_string = '''
                 opacity: 1;
                 visibility: visible;
                 transform: translateX(0);
+            }
+
+            /* Keyframes for subtle pulsing of the toggle info button */
+            @keyframes toggle-pulse {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
+                }
             }
             
             .toggle-annotation-content h3 {
@@ -608,17 +749,42 @@ app.index_string = '''
 # ============================================================================
 
 app.layout = html.Div([
-    # Hero Section (full viewport height)
+    # Top navigation bar (always visible)
     html.Div([
-        html.H1([
-            "Exploring the ",
-            html.Span("Natura 2000", className="natura-text"),
-            " network"
-        ], className="main-title center"),
-    ], className="hero-section"),
+        html.Div([
+            html.A("↑", href="#page-top", className="top-bar-button top-bar-button-circle"),
+        ], className="top-bar-left"),
+        html.Div([
+            html.Button(
+                "Interacting with graphics",
+                id="top-info-btn",
+                n_clicks=0,
+                className="top-bar-button"
+            ),
+        ], className="top-bar-right"),
+    ], className="top-bar"),
+    
+    # Small info box for interaction instructions
+    html.Div([
+        html.H3("Interacting with these visuals"),
+        html.P([
+            "Hover over elements to see details, zoom in and out, ",
+            "click on points or nodes for more information, ",
+            "and filter data by clicking on legend items or labels."
+        ]),
+    ], id="top-info-box", className="top-info-box"),
     
     # Story content wrapper
     html.Div([
+        
+        # Main Title (hero section)
+        html.Div([
+            html.H1([
+                "Exploring the ",
+                html.Span("Natura 2000", className="natura-text"),
+                " network"
+            ], className="main-title center"),
+        ], className="hero-section", id="page-top"),
         
         # Story Point 1 - positioned left
         html.Div([
@@ -632,10 +798,10 @@ app.layout = html.Div([
         html.Div([
             html.P([
                 "Spanning all across Europe and covering more than ",
-                html.Strong("18%"),
-                " land and ",
-                html.Strong("7%"),
-                " marine area as of ",
+                html.Strong("18% land"),
+                " and ",
+                html.Strong("7% marine"),
+                " area as of ",
                 html.Strong("2017"),
                 "."
             ])
@@ -645,12 +811,11 @@ app.layout = html.Div([
         html.Div([
             html.P([
                 "There are ",
-                html.Strong("27"),
-                " different habitats, which we can cluster into ",
-                html.Strong("8"),
-                " categories, and over ",
-                html.Strong("280 thousand"),
-                " protected sites."
+                html.Strong("27  different habitats"),
+                ", which we can cluster into ",
+                html.Strong("8 categories"),
+                ", and over ",
+                html.Strong("280 thousand protected sites.")
             ])
         ], className="story-point left", id="story-point-3"),
         
@@ -665,9 +830,11 @@ app.layout = html.Div([
                         n_clicks=0
                     ),
                     html.Div([
-                        html.H3("Explore the data"),
+                        html.H3("Understanding the data"),
                         html.P([
-                            "Explore the data by hovering over them, clicking, zooming in/out, or selecting various regions."
+                            "Each bubble represents a habitat found in the dataset.\
+                            The ",html.Strong("closer")," to the center, the more common it is in the data.\
+                            The ",html.Strong("larger")," the bubble, the more area this habitat covers (in km²)."
                         ])
                     ], id="toggle-annotation-content", className="toggle-annotation-content")
                 ], className="toggle-annotation"),
@@ -687,7 +854,7 @@ app.layout = html.Div([
             html.P([
                 "These habitats are found in ",
                 html.Strong("27"),
-                " countries, in different countries."
+                " countries, covering smaller or larger quantities of the landmass."
             ])
         ], className="story-point left", id="story-point-4")
     ], className="story-content"),
@@ -704,9 +871,11 @@ app.layout = html.Div([
                         n_clicks=0
                     ),
                     html.Div([
-                        html.H3("Explore the data"),
+                        html.H3("Explore countries and their habitats"),
                         html.P([
-                            "Notice how certain habitat clusters are concentrated in specific regions, reflecting Europe's diverse ecosystems from Mediterranean coasts to Nordic forests."
+                            "Click on any country or habitat to visualize specific information.\
+                            Notice how certain habitat clusters are concentrated in specific countries\
+                            for example Spain or France that hold ", html.Strong("30%"), " and ", html.Strong("50%"), " of protected habitats respectively."
                         ])
                     ], id="toggle-sankey-annotation-content", className="toggle-annotation-content")
                 ], className="toggle-annotation"),
@@ -738,18 +907,36 @@ app.layout = html.Div([
         ], className="story-point left", id="story-point-6")
     ], className="story-content"),
     
-    # Choropleth Grid Section (centered)
-] + ([
+    # Choropleth Grid Section (centered) with Toggleable Annotation
+    ] + ([
     html.Div([
         html.Div([
+            html.Div([
+                html.Button(
+                    "ℹ",
+                    id="toggle-choropleth-annotation-btn",
+                    className="toggle-annotation-button",
+                    n_clicks=0,
+                ),
+                html.Div([
+                    html.H3("How to read this choropleth"),
+                    html.P([
+                        "Each map shows the coverage percentage distribution of one habitat ",
+                        "cluster across European countries. ",
+                        "The darker the color, the higher the coverage.", 
+                        "Notice how ", html.Strong("Spain"), " holds the highest coverage for all habitats, except for the coastal where ", html.Strong("France"), " rules with >18% of coverage.",
+                        "Hover over the countries to find out more!",
+                    ])
+                ], id="toggle-choropleth-annotation-content", className="toggle-annotation-content")
+            ], className="toggle-annotation", style={'left': '-35px', 'top': '55px'}),
             dcc.Graph(
                 id='choropleth-grid',
                 figure=create_cluster_choropleth_grid(choropleth_data, europe_gdf),
                 config={'displayModeBar': False}
             )
-        ])  # Removed maxWidth - uses full width of story-content wrapper. ADJUST: Change '3rem' in margin to adjust vertical spacing
+        ])
     ], className="story-content", style={'maxWidth': '850px'})
-] if choropleth_data is not None and europe_gdf is not None else []) + [
+    ] if choropleth_data is not None and europe_gdf is not None else []) + [
     
     # Story Point: Network tracks over 35 thousand species with Pictogram
 ] + ([
@@ -796,9 +983,18 @@ app.layout = html.Div([
 ] + ([
     html.Div([
         html.Div([
+            # Controls row: species type + country
             html.Div([
-                html.Label("Select Species Type:", style={'fontSize': '1rem', 'font': 'Noto Sans Mono', 'color': COLORS['text_primary'], 'marginBottom': '0.5rem'}),
                 html.Div([
+                    html.Label(
+                        html.Strong("Species Type"),
+                        style={
+                            'fontSize': '1rem',
+                            'fontFamily': FONT_FAMILY,
+                            'color': COLORS['text_primary'],
+                            'marginBottom': '0.3rem',
+                        }
+                    ),
                     dcc.Dropdown(
                         id='species-type-dropdown',
                         clearable=False,
@@ -814,13 +1010,51 @@ app.layout = html.Div([
                             'fontFamily': FONT_FAMILY
                         }
                     ),
-                ], className='modern-dropdown-wrapper'),
+                ], style={
+                    'maxWidth': '220px',
+                    'textAlign': 'center'
+                }),
+                html.Div([
+                    html.Label(
+                        html.Strong("Country"),
+                        style={
+                            'fontSize': '1rem',
+                            'fontFamily': FONT_FAMILY,
+                            'color': COLORS['text_primary'],
+                            'marginBottom': '0.3rem',
+                        }
+                    ),
+                    dcc.Dropdown(
+                        id='species-country-dropdown',
+                        clearable=False,
+                        searchable=False,
+                        options=(
+                            [{'label': 'All countries', 'value': 'ALL'}] +
+                            [
+                                {
+                                    'label': COUNTRY_CODES_NAMES.get(code, code),
+                                    'value': code
+                                }
+                                for code in species_count_sites['COUNTRY_CODE'].sort_values().dropna().unique()
+                            ]
+                        ),
+                        value='ALL',
+                        style={
+                            'backgroundColor': COLORS['white'],
+                            'color': COLORS['text_primary'],
+                            'fontFamily': FONT_FAMILY
+                        }
+                    ),
+                ], style={
+                    'maxWidth': '260px',
+                    'textAlign': 'center'
+                }),
             ], style={
-                'maxWidth': '200px',
-                'marginTop': 'auto',
-                'marginBottom': '1rem',
-                'marginLeft': 'auto',
-                'marginRight': 'auto'
+                'display': 'flex',
+                'gap': '1.5rem',
+                'justifyContent': 'center',
+                'alignItems': 'flex-end',
+                'marginBottom': '1.5rem'
             }),
             html.Div([
                 dcc.Graph(
@@ -918,11 +1152,26 @@ def toggle_sankey_annotation(n_clicks):
         return "toggle-annotation-content"
 
 @app.callback(
+    Output('toggle-choropleth-annotation-content', 'className'),
+    Input('toggle-choropleth-annotation-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def toggle_choropleth_annotation(n_clicks):
+    if n_clicks is None or n_clicks == 0:
+        return "toggle-annotation-content"
+    # Toggle visibility based on even/odd clicks
+    if n_clicks % 2 == 1:
+        return "toggle-annotation-content visible"
+    else:
+        return "toggle-annotation-content"
+
+@app.callback(
     Output('species-scatter-map', 'figure'),
-    [Input('species-type-dropdown', 'value')],
+    [Input('species-type-dropdown', 'value'),
+     Input('species-country-dropdown', 'value')],
     prevent_initial_call=False
 )
-def update_species_scatter_map(selected_species_type):
+def update_species_scatter_map(selected_species_type, selected_country):
     """
     Update the species scatter map based on the selected species type.
     """
@@ -944,9 +1193,33 @@ def update_species_scatter_map(selected_species_type):
         )
         return fig
     
-    # Create the scatter map for the selected species type
-    fig = create_species_scatter_map(species_count_sites, selected_species_type, europe_gdf)
+    # Create the scatter map for the selected species type and country
+    fig = create_species_scatter_map(
+        species_count_sites,
+        selected_species_type,
+        europe_gdf,
+        country_code=selected_country
+    )
     return fig
+
+
+# Top info bar: toggle interaction help text
+@app.callback(
+    Output('top-info-box', 'className'),
+    Input('top-info-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def toggle_top_info(n_clicks):
+    """
+    Toggle visibility of the top interaction help box based on button clicks.
+    """
+    base_class = "top-info-box"
+    if not n_clicks:
+        return base_class
+    # Odd clicks -> visible, even clicks -> hidden
+    if n_clicks % 2 == 1:
+        return base_class + " visible"
+    return base_class
 
 
 # Expose server for Gunicorn (production)
